@@ -1,6 +1,7 @@
 package com.airship;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -28,17 +29,25 @@ public class AirshipCoreBlock extends Block {
         AirshipStructureDetector.DetectionResult result =
                 AirshipStructureDetector.detect(level, pos);
 
-        int count = result.blocks().size();
         if (result.capped()) {
             player.sendSystemMessage(
                     net.minecraft.network.chat.Component.literal(
-                            "Airship structure detected: " + count + " blocks (search limit reached)"
+                            "Airship is too large to move (maximum 4096 blocks)"
+                    )
+            );
+            return InteractionResult.SUCCESS;
+        }
+
+        if (AirshipMovement.move(level, result, Direction.UP)) {
+            player.sendSystemMessage(
+                    net.minecraft.network.chat.Component.literal(
+                            "Airship moved up 1 block"
                     )
             );
         } else {
             player.sendSystemMessage(
                     net.minecraft.network.chat.Component.literal(
-                            "Airship structure detected: " + count + " blocks"
+                            "Airship cannot move up: destination is blocked"
                     )
             );
         }
