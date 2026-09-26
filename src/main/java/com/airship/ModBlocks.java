@@ -2,12 +2,14 @@ package com.airship;
 
 import java.util.function.Function;
 
+import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -73,6 +75,9 @@ public final class ModBlocks {
     }
 
     public static void initialize() {
-        // Forces class initialization and therefore registry registration.
+        ItemGroupEvents.modifyOutputEvent(CreativeModeTabs.BUILDING_BLOCKS).register(entries -> {
+            entries.accept(AIRSHIP_CORE.asItem());
+            entries.accept(AIRSHIP_BALLOON.asItem());
+        });
     }
 }
