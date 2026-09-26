@@ -47,7 +47,7 @@ public final class ModBlocks {
 
     public static final Block AIRSHIP_CORE = register(
             AIRSHIP_CORE_KEY,
-            Block::new,
+            AirshipCoreBlock::new,
             BlockBehaviour.Properties.of()
     );
 
