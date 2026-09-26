@@ -38,16 +38,36 @@ public class AirshipCoreBlock extends Block {
             return InteractionResult.SUCCESS;
         }
 
+        int blockCount = result.blocks().size();
+        int balloonCount = AirshipLift.countBalloons(level, result);
+        int requiredBalloons = AirshipLift.requiredBalloons(blockCount);
+
+        player.sendSystemMessage(
+                net.minecraft.network.chat.Component.literal(
+                        "Airship: " + blockCount + " blocks, "
+                                + balloonCount + "/" + requiredBalloons + " balloons"
+                )
+        );
+
+        if (!AirshipLift.hasEnoughLift(balloonCount, requiredBalloons)) {
+            player.sendSystemMessage(
+                    net.minecraft.network.chat.Component.literal(
+                            "Airship cannot rise: not enough balloons"
+                    )
+            );
+            return InteractionResult.SUCCESS;
+        }
+
         if (AirshipMovement.move(level, result, Direction.UP)) {
             player.sendSystemMessage(
                     net.minecraft.network.chat.Component.literal(
-                            "Airship moved up 1 block"
+                            "Airship lifted 1 block"
                     )
             );
         } else {
             player.sendSystemMessage(
                     net.minecraft.network.chat.Component.literal(
-                            "Airship cannot move up: destination is blocked"
+                            "Airship cannot rise: destination is blocked"
                     )
             );
         }
