@@ -1,12 +1,12 @@
 package com.airship;
 
+import java.util.Set;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.BlockHitResult;
 
 public final class AirshipEngine {
     private AirshipEngine() {
@@ -24,39 +24,26 @@ public final class AirshipEngine {
         return count;
     }
 
-    public static BlockPos findCore(Level level, AirshipStructureDetector.DetectionResult result) {
-        for (BlockPos pos : result.blocks()) {
-            BlockState state = level.getBlockState(pos);
-            if (state.is(ModBlocks.AIRSHIP_CORE)) {
-                return pos;
-            }
-        }
-
-        return null;
-    }
-
     public static InteractionResult handleUse(Level level, BlockPos enginePos, Player player) {
         if (level.isClientSide()) {
             return InteractionResult.SUCCESS;
         }
 
-        AirshipStructureDetector.DetectionResult result =
-                AirshipStructureDetector.detect(level, enginePos);
+        Set<BlockPos> registered = AirshipStructureRegistry.get(level, enginePos);
 
-        BlockPos corePos = findCore(level, result);
-
-        if (corePos == null) {
+        if (registered == null) {
             player.sendSystemMessage(
                     net.minecraft.network.chat.Component.literal(
-                            "Engine is not connected to an Airship Core"
+                            "Use the Airship Core once to register the airship before using the engine"
                     )
             );
             return InteractionResult.SUCCESS;
         }
 
-        int engineCount = countEngines(level, result);
+        AirshipStructureDetector.DetectionResult result =
+                new AirshipStructureDetector.DetectionResult(registered, false);
 
-        if (engineCount <= 0) {
+        if (countEngines(level, result) <= 0) {
             return InteractionResult.SUCCESS;
         }
 
