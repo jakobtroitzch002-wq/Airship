@@ -2,6 +2,7 @@ package com.airship;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -21,6 +22,14 @@ public class AirshipCoreBlock extends Block {
             BlockPos pos,
             Player player,
             BlockHitResult hit
+    ) {
+        return handleUse(level, pos, player);
+    }
+
+    public static InteractionResult handleUse(
+            Level level,
+            BlockPos pos,
+            Player player
     ) {
         if (level.isClientSide()) {
             return InteractionResult.SUCCESS;
