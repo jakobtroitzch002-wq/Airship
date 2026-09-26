@@ -23,20 +23,31 @@ public final class ModBlocks {
             Identifier.fromNamespaceAndPath(AirshipMod.MOD_ID, "airship_core")
     );
 
+    public static final ResourceKey<Block> AIRSHIP_BALLOON_KEY = ResourceKey.create(
+            Registries.BLOCK,
+            Identifier.fromNamespaceAndPath(AirshipMod.MOD_ID, "airship_balloon")
+    );
+
+    public static final ResourceKey<Item> AIRSHIP_BALLOON_ITEM_KEY = ResourceKey.create(
+            Registries.ITEM,
+            Identifier.fromNamespaceAndPath(AirshipMod.MOD_ID, "airship_balloon")
+    );
+
     public static final Block AIRSHIP_CORE = register(
             AIRSHIP_CORE_KEY,
             Block::new,
             BlockBehaviour.Properties.of()
     );
 
+    public static final Block AIRSHIP_BALLOON = register(
+            AIRSHIP_BALLOON_KEY,
+            Block::new,
+            BlockBehaviour.Properties.of()
+    );
+
     static {
-        BlockItem blockItem = new BlockItem(
-                AIRSHIP_CORE,
-                new Item.Properties()
-                        .setId(AIRSHIP_CORE_ITEM_KEY)
-                        .useBlockDescriptionPrefix()
-        );
-        Registry.register(BuiltInRegistries.ITEM, AIRSHIP_CORE_ITEM_KEY, blockItem);
+        registerBlockItem(AIRSHIP_CORE, AIRSHIP_CORE_ITEM_KEY);
+        registerBlockItem(AIRSHIP_BALLOON, AIRSHIP_BALLOON_ITEM_KEY);
     }
 
     private ModBlocks() {
@@ -49,6 +60,16 @@ public final class ModBlocks {
     ) {
         Block block = factory.apply(properties.setId(key));
         return Registry.register(BuiltInRegistries.BLOCK, key, block);
+    }
+
+    private static void registerBlockItem(Block block, ResourceKey<Item> key) {
+        BlockItem blockItem = new BlockItem(
+                block,
+                new Item.Properties()
+                        .setId(key)
+                        .useBlockDescriptionPrefix()
+        );
+        Registry.register(BuiltInRegistries.ITEM, key, blockItem);
     }
 
     public static void initialize() {
