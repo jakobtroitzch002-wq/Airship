@@ -15,11 +15,17 @@ public final class AirshipMod implements ModInitializer {
         ModBlocks.initialize();
 
         UseBlockCallback.EVENT.register((player, level, hand, hit) -> {
-            if (!(level.getBlockState(hit.getBlockPos()).getBlock() instanceof AirshipCoreBlock)) {
-                return InteractionResult.PASS;
+            var block = level.getBlockState(hit.getBlockPos()).getBlock();
+
+            if (block instanceof AirshipCoreBlock) {
+                return AirshipCoreBlock.handleUse(level, hit.getBlockPos(), player);
             }
 
-            return AirshipCoreBlock.handleUse(level, hit.getBlockPos(), player);
+            if (block == ModBlocks.AIRSHIP_ENGINE) {
+                return AirshipEngine.handleUse(level, hit.getBlockPos(), player);
+            }
+
+            return InteractionResult.PASS;
         });
 
         LOGGER.info("Airship mod initialized");
