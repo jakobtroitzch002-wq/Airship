@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "airship",
+  "version": "${version}",
+  "name": "Airship",
+  "description": "A lightweight Fabric mod for player-built airships.",
+  "authors": ["jakobtroitzch002-wq"],
+  "environment": "*",
+  "entrypoints": {
+    "main": ["com.airship.AirshipMod"]
+  },
+  "depends": {
+    "fabricloader": ">=" + "${loader_version}",
+    "minecraft": "~26.3",
+    "java": ">=25"
+  }
+}
