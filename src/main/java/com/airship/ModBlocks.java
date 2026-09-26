@@ -2,7 +2,7 @@ package com.airship;
 
 import java.util.function.Function;
 
-import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
+import net.fabricmc.fabric.api.creativetab.v1.CreativeModeTabEvents;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -75,7 +75,7 @@ public final class ModBlocks {
     }
 
     public static void initialize() {
-        ItemGroupEvents.modifyOutputEvent(CreativeModeTabs.BUILDING_BLOCKS).register(entries -> {
+        CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.BUILDING_BLOCKS).register(entries -> {
             entries.accept(AIRSHIP_CORE.asItem());
             entries.accept(AIRSHIP_BALLOON.asItem());
         });
