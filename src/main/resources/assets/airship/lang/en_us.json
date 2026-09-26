@@ -1,4 +1,5 @@
 {
   "block.airship.airship_core": "Airship Core",
-  "block.airship.airship_balloon": "Airship Balloon"
+  "block.airship.airship_balloon": "Airship Balloon",
+  "block.airship.airship_engine": "Airship Engine"
 }
