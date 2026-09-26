@@ -46,6 +46,8 @@ public final class AirshipMovement {
             level.setBlock(target, states.get(i), 3);
         }
 
+        AirshipStructureRegistry.move(level, result.blocks(), offset);
+
         return true;
     }
 
