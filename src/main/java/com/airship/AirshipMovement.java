@@ -6,6 +6,7 @@ import java.util.List;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -36,6 +37,22 @@ public final class AirshipMovement {
             states.add(level.getBlockState(source));
         }
 
+        List<Player> passengers = new ArrayList<>();
+        for (Player player : level.players()) {
+            BlockPos playerFeet = BlockPos.containing(
+                    player.getX(),
+                    player.getY() - 0.01,
+                    player.getZ()
+            );
+
+            BlockPos playerBelow = playerFeet.below();
+
+            if (result.blocks().contains(playerFeet)
+                    || result.blocks().contains(playerBelow)) {
+                passengers.add(player);
+            }
+        }
+
         for (BlockPos source : sourcePositions) {
             level.removeBlock(source, false);
         }
@@ -47,6 +64,14 @@ public final class AirshipMovement {
         }
 
         AirshipStructureRegistry.move(level, result.blocks(), offset);
+
+        for (Player player : passengers) {
+            player.setPos(
+                    player.getX() + offset.getX(),
+                    player.getY() + offset.getY(),
+                    player.getZ() + offset.getZ()
+            );
+        }
 
         return true;
     }
