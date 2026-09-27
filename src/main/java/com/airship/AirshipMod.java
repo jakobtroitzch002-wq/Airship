@@ -3,6 +3,7 @@ package com.airship;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.BlockItem;
 import org.slf4j.Logger;
@@ -15,6 +16,12 @@ public final class AirshipMod implements ModInitializer {
     @Override
     public void onInitialize() {
         ModBlocks.initialize();
+
+        PayloadTypeRegistry.playC2S().register(
+                AirshipControlPayload.TYPE,
+                AirshipControlPayload.CODEC
+        );
+        AirshipControls.registerServer();
 
         UseBlockCallback.EVENT.register((player, level, hand, hit) -> {
             if (level.isClientSide()) {
