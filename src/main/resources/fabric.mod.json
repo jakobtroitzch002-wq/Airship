@@ -7,7 +7,8 @@
   "authors": ["jakobtroitzch002-wq"],
   "environment": "*",
   "entrypoints": {
-    "main": ["com.airship.AirshipMod"]
+    "main": ["com.airship.AirshipMod"],
+    "client": ["com.airship.AirshipClient"]
   },
   "depends": {
     "fabricloader": ">=0.19.5",
