@@ -4,11 +4,11 @@ import com.mojang.blaze3d.vertex.PoseStack;
 
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.block.BlockModelResolver;
-import net.minecraft.client.renderer.block.BlockModelRenderState;
-import net.minecraft.client.renderer.block.model.BlockDisplayContext;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.renderer.block.model.BlockDisplayContext;
 
 public class AirshipBuildBlockRenderer implements BlockEntityRenderer<
         AirshipBuildBlockEntity,
@@ -56,15 +56,15 @@ public class AirshipBuildBlockRenderer implements BlockEntityRenderer<
             SubmitNodeCollector collector,
             CameraRenderState camera
     ) {
-        BlockModelRenderState model = state.hasCustomTexture
-                ? state.blockModel
-                : state.frameModel;
+        if (!state.hasCustomTexture) {
+            return;
+        }
 
-        model.submit(
+        state.blockModel.submit(
                 poseStack,
                 collector,
                 15728880,
-                net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY,
+                OverlayTexture.NO_OVERLAY,
                 0
         );
     }
