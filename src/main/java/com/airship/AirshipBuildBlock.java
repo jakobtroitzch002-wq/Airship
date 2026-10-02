@@ -14,11 +14,19 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.phys.BlockHitResult;
 
 public class AirshipBuildBlock extends BaseEntityBlock {
+    public static final BooleanProperty HAS_TEXTURE = BooleanProperty.create("has_texture");
     public AirshipBuildBlock(Properties properties) {
         super(properties);
+        registerDefaultState(stateDefinition.any().setValue(HAS_TEXTURE, false));
+    }
+
+    @Override
+    protected void createBlockStateDefinition(net.minecraft.world.level.block.state.StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(HAS_TEXTURE);
     }
 
     @Override
