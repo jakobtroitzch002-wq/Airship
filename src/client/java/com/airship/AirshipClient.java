@@ -17,7 +17,7 @@ public final class AirshipClient implements ClientModInitializer {
             )
     );
 
-    private static final KeyMapping BACKWARD = KeyBindingHelper.registerKeyMapping(
+    private static final KeyMapping BACKWARD = KeyMappingHelper.registerKeyMapping(
             new KeyMapping(
                     "key.airship.backward",
                     InputConstants.KEY_DOWN,
@@ -25,7 +25,7 @@ public final class AirshipClient implements ClientModInitializer {
             )
     );
 
-    private static final KeyMapping LEFT = KeyBindingHelper.registerKeyMapping(
+    private static final KeyMapping LEFT = KeyMappingHelper.registerKeyMapping(
             new KeyMapping(
                     "key.airship.left",
                     InputConstants.KEY_LEFT,
@@ -33,7 +33,7 @@ public final class AirshipClient implements ClientModInitializer {
             )
     );
 
-    private static final KeyMapping RIGHT = KeyBindingHelper.registerKeyMapping(
+    private static final KeyMapping RIGHT = KeyMappingHelper.registerKeyMapping(
             new KeyMapping(
                     "key.airship.right",
                     InputConstants.KEY_RIGHT,
