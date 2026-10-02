@@ -45,6 +45,16 @@ public final class ModBlocks {
             Identifier.fromNamespaceAndPath(AirshipMod.MOD_ID, "airship_engine")
     );
 
+    public static final ResourceKey<Block> AIRSHIP_BUILD_KEY = ResourceKey.create(
+            Registries.BLOCK,
+            Identifier.fromNamespaceAndPath(AirshipMod.MOD_ID, "airship_build")
+    );
+
+    public static final ResourceKey<Item> AIRSHIP_BUILD_ITEM_KEY = ResourceKey.create(
+            Registries.ITEM,
+            Identifier.fromNamespaceAndPath(AirshipMod.MOD_ID, "airship_build")
+    );
+
     public static final Block AIRSHIP_CORE = register(
             AIRSHIP_CORE_KEY,
             AirshipCoreBlock::new,
@@ -63,10 +73,17 @@ public final class ModBlocks {
             BlockBehaviour.Properties.of()
     );
 
+    public static final Block AIRSHIP_BUILD = register(
+            AIRSHIP_BUILD_KEY,
+            AirshipBuildBlock::new,
+            BlockBehaviour.Properties.of()
+    );
+
     static {
         registerBlockItem(AIRSHIP_CORE, AIRSHIP_CORE_ITEM_KEY);
         registerBlockItem(AIRSHIP_BALLOON, AIRSHIP_BALLOON_ITEM_KEY);
         registerBlockItem(AIRSHIP_ENGINE, AIRSHIP_ENGINE_ITEM_KEY);
+        registerBlockItem(AIRSHIP_BUILD, AIRSHIP_BUILD_ITEM_KEY);
     }
 
     private ModBlocks() {
@@ -96,6 +113,7 @@ public final class ModBlocks {
             entries.accept(AIRSHIP_CORE.asItem());
             entries.accept(AIRSHIP_BALLOON.asItem());
             entries.accept(AIRSHIP_ENGINE.asItem());
+            entries.accept(AIRSHIP_BUILD.asItem());
         });
     }
 }
