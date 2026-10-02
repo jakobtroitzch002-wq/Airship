@@ -35,6 +35,10 @@ public class AirshipBuildBlock extends BaseEntityBlock {
             return InteractionResult.PASS;
         }
 
+        if (blockItem.getBlock() == ModBlocks.AIRSHIP_BUILD) {
+            return InteractionResult.FAIL;
+        }
+
         BlockState newDisplayState = blockItem.getBlock().defaultBlockState();
 
         if (!newDisplayState.isSolidRender()) {
