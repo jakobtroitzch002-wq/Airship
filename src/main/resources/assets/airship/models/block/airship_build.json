@@ -1,6 +1,7 @@
 {
-  "parent": "minecraft:block/cube_all",
+  "parent": "minecraft:block/block",
   "textures": {
-    "all": "minecraft:block/iron_bars"
-  }
+    "particle": "airship:block/airship_build_frame"
+  },
+  "elements": []
 }
