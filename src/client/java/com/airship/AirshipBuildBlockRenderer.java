@@ -2,14 +2,13 @@ package com.airship;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.block.BlockModelResolver;
+import net.minecraft.client.renderer.block.BlockModelRenderState;
 import net.minecraft.client.renderer.block.model.BlockDisplayContext;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
-import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
-import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
-import net.minecraft.core.BlockPos;
 
 public class AirshipBuildBlockRenderer implements BlockEntityRenderer<
         AirshipBuildBlockEntity,
@@ -39,11 +38,21 @@ public class AirshipBuildBlockRenderer implements BlockEntityRenderer<
                 blockEntity, state, partialTick, cameraPosition, breakProgress
         );
 
-        blockModelResolver.update(
-                state.blockModel,
-                blockEntity.getDisplayState(),
-                DISPLAY_CONTEXT
-        );
+        state.hasCustomTexture = blockEntity.hasCustomTexture();
+
+        if (state.hasCustomTexture) {
+            blockModelResolver.update(
+                    state.blockModel,
+                    blockEntity.getDisplayState(),
+                    DISPLAY_CONTEXT
+            );
+        } else {
+            blockModelResolver.update(
+                    state.frameModel,
+                    ModBlocks.AIRSHIP_BUILD.defaultBlockState(),
+                    DISPLAY_CONTEXT
+            );
+        }
     }
 
     @Override
@@ -53,7 +62,11 @@ public class AirshipBuildBlockRenderer implements BlockEntityRenderer<
             SubmitNodeCollector collector,
             CameraRenderState camera
     ) {
-        state.blockModel.submit(
+        BlockModelRenderState model = state.hasCustomTexture
+                ? state.blockModel
+                : state.frameModel;
+
+        model.submit(
                 poseStack,
                 collector,
                 15728880,
