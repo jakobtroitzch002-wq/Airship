@@ -1,22 +1,19 @@
 package com.airship;
 
-import java.util.List;
-import java.util.Optional;
-
-import com.mojang.serialization.DynamicOps;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
+
 import net.minecraft.core.BlockPos;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtOps;
-import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.component.CustomData;
+import net.minecraft.world.item.component.DataComponents;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
@@ -28,13 +25,12 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.storage.loot.LootContextParams;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.resources.RegistryOps;
 
 public class AirshipBuildBlock extends BaseEntityBlock {
-    private static final String DISPLAY_STATE_KEY = "airship_display_state";
-
     public static final net.minecraft.world.level.block.state.properties.BooleanProperty HAS_TEXTURE =
             net.minecraft.world.level.block.state.properties.BooleanProperty.create("has_texture");
+
+    private static final String DISPLAY_BLOCK_ID = "airship_display_block";
 
     public AirshipBuildBlock(Properties properties) {
         super(properties);
@@ -52,7 +48,15 @@ public class AirshipBuildBlock extends BaseEntityBlock {
         BlockEntity blockEntity = params.getOptionalParameter(LootContextParams.BLOCK_ENTITY);
 
         if (blockEntity instanceof AirshipBuildBlockEntity buildEntity && buildEntity.hasCustomTexture()) {
-            serializeDisplayState(drop, buildEntity.getDisplayState(), params.getLevel().registryAccess());
+            String blockId = net.minecraft.core.registries.BuiltInRegistries.BLOCK
+                    .getKey(buildEntity.getDisplayState().getBlock())
+                    .toString();
+            drop.set(DataComponents.CUSTOM_NAME, Component.literal("Airship Build Block"));
+            net.minecraft.world.item.component.CustomData.update(
+                    DataComponents.CUSTOM_DATA,
+                    drop,
+                    tag -> tag.putString(DISPLAY_BLOCK_ID, blockId)
+            );
         }
 
         return List.of(drop);
@@ -76,24 +80,26 @@ public class AirshipBuildBlock extends BaseEntityBlock {
             return;
         }
 
-        CustomData customData = itemStack.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
-        if (customData == null || !customData.contains(DISPLAY_STATE_KEY)) {
+        net.minecraft.world.item.component.CustomData customData = itemStack.get(DataComponents.CUSTOM_DATA);
+        if (customData == null || !customData.contains(DISPLAY_BLOCK_ID)) {
             return;
         }
 
-        DynamicOps<net.minecraft.nbt.Tag> ops = RegistryOps.create(NbtOps.INSTANCE, level.registryAccess());
-        customData.copyTag().get(DISPLAY_STATE_KEY)
-                .flatMap(tag -> BlockState.CODEC.parse(ops, tag).result())
-                .ifPresent(buildEntity::setDisplayState);
-    }
+        String blockId = customData.copyTag().getString(DISPLAY_BLOCK_ID).orElse("");
+        net.minecraft.resources.ResourceLocation id = net.minecraft.resources.ResourceLocation.tryParse(blockId);
+        if (id == null) {
+            return;
+        }
 
-    private static void serializeDisplayState(ItemStack stack, BlockState displayState, RegistryAccess registryAccess) {
-        DynamicOps<net.minecraft.nbt.Tag> ops = RegistryOps.create(NbtOps.INSTANCE, registryAccess);
-        BlockState.CODEC.encodeStart(ops, displayState).result().ifPresent(tag -> {
-            CompoundTag data = new CompoundTag();
-            data.put(DISPLAY_STATE_KEY, tag);
-            stack.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, CustomData.of(data));
-        });
+        net.minecraft.world.level.block.Block block = net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(id).orElse(null);
+        if (block == null) {
+            return;
+        }
+
+        BlockState displayState = block.defaultBlockState();
+        if (displayState.isSolidRender()) {
+            buildEntity.setDisplayState(displayState);
+        }
     }
 
     @Override
