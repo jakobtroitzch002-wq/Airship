@@ -5,15 +5,16 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.network.chat.Component;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.component.DataComponents;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
@@ -22,8 +23,8 @@ import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraft.world.level.storage.loot.LootContextParams;
 import net.minecraft.world.level.storage.loot.LootParams;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.BlockHitResult;
 
 public class AirshipBuildBlock extends BaseEntityBlock {
@@ -48,14 +49,11 @@ public class AirshipBuildBlock extends BaseEntityBlock {
         BlockEntity blockEntity = params.getOptionalParameter(LootContextParams.BLOCK_ENTITY);
 
         if (blockEntity instanceof AirshipBuildBlockEntity buildEntity && buildEntity.hasCustomTexture()) {
-            String blockId = net.minecraft.core.registries.BuiltInRegistries.BLOCK
-                    .getKey(buildEntity.getDisplayState().getBlock())
-                    .toString();
-            drop.set(DataComponents.CUSTOM_NAME, Component.literal("Airship Build Block"));
-            net.minecraft.world.item.component.CustomData.update(
+            Identifier id = BuiltInRegistries.BLOCK.getKey(buildEntity.getDisplayState().getBlock());
+            CustomData.update(
                     DataComponents.CUSTOM_DATA,
                     drop,
-                    tag -> tag.putString(DISPLAY_BLOCK_ID, blockId)
+                    tag -> tag.putString(DISPLAY_BLOCK_ID, id.toString())
             );
         }
 
@@ -80,18 +78,18 @@ public class AirshipBuildBlock extends BaseEntityBlock {
             return;
         }
 
-        net.minecraft.world.item.component.CustomData customData = itemStack.get(DataComponents.CUSTOM_DATA);
+        CustomData customData = itemStack.get(DataComponents.CUSTOM_DATA);
         if (customData == null || !customData.contains(DISPLAY_BLOCK_ID)) {
             return;
         }
 
         String blockId = customData.copyTag().getString(DISPLAY_BLOCK_ID).orElse("");
-        net.minecraft.resources.ResourceLocation id = net.minecraft.resources.ResourceLocation.tryParse(blockId);
+        Identifier id = Identifier.tryParse(blockId);
         if (id == null) {
             return;
         }
 
-        net.minecraft.world.level.block.Block block = net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(id).orElse(null);
+        Block block = BuiltInRegistries.BLOCK.get(id).orElse(null);
         if (block == null) {
             return;
         }
