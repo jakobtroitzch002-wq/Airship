@@ -1,16 +1,16 @@
 package com.airship;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 
 public class AirshipBuildBlockEntity extends BlockEntity {
-    private BlockState displayState = net.minecraft.world.level.block.Blocks.IRON_BLOCK.defaultBlockState();
+    private BlockState displayState = Blocks.IRON_BLOCK.defaultBlockState();
+    private boolean hasCustomTexture;
 
     public AirshipBuildBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.AIRSHIP_BUILD, pos, state);
@@ -20,8 +20,13 @@ public class AirshipBuildBlockEntity extends BlockEntity {
         return displayState;
     }
 
+    public boolean hasCustomTexture() {
+        return hasCustomTexture;
+    }
+
     public void setDisplayState(BlockState displayState) {
         this.displayState = displayState;
+        this.hasCustomTexture = true;
         setChanged();
 
         if (level != null) {
@@ -32,13 +37,17 @@ public class AirshipBuildBlockEntity extends BlockEntity {
     @Override
     protected void saveAdditional(ValueOutput output) {
         super.saveAdditional(output);
-        output.store("display_block", BlockState.CODEC, displayState);
+        output.putBoolean("has_custom_texture", hasCustomTexture);
+        if (hasCustomTexture) {
+            output.store("display_block", BlockState.CODEC, displayState);
+        }
     }
 
     @Override
     protected void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
+        hasCustomTexture = input.getBooleanOr("has_custom_texture", false);
         displayState = input.read("display_block", BlockState.CODEC)
-                .orElse(net.minecraft.world.level.block.Blocks.IRON_BLOCK.defaultBlockState());
+                .orElse(Blocks.IRON_BLOCK.defaultBlockState());
     }
 }
