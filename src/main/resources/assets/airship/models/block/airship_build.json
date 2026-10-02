@@ -1,7 +1,7 @@
 {
   "parent": "minecraft:block/block",
   "textures": {
-    "particle": "airship:block/airship_build_frame"
+    "particle": "minecraft:block/air"
   },
   "elements": []
 }
