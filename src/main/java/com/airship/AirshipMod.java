@@ -17,7 +17,7 @@ public final class AirshipMod implements ModInitializer {
     public void onInitialize() {
         ModBlocks.initialize();
 
-        PayloadTypeRegistry.playC2S().register(
+        PayloadTypeRegistry.serverboundPlay().register(
                 AirshipControlPayload.TYPE,
                 AirshipControlPayload.CODEC
         );
