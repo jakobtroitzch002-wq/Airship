@@ -49,6 +49,7 @@ public class AirshipBuildBlock extends BaseEntityBlock {
             return InteractionResult.PASS;
         }
 
+        boolean hadOldTexture = buildEntity.hasCustomTexture();
         BlockState oldDisplayState = buildEntity.getDisplayState();
         buildEntity.setDisplayState(newDisplayState);
 
@@ -56,7 +57,7 @@ public class AirshipBuildBlock extends BaseEntityBlock {
             itemStack.shrink(1);
         }
 
-        if (!oldDisplayState.is(ModBlocks.AIRSHIP_BUILD)) {
+        if (hadOldTexture) {
             popResource(level, pos, new ItemStack(oldDisplayState.getBlock()));
         }
 
