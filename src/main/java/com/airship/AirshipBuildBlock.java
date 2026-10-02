@@ -79,7 +79,7 @@ public class AirshipBuildBlock extends BaseEntityBlock {
         }
 
         CustomData customData = itemStack.get(DataComponents.CUSTOM_DATA);
-        if (customData == null || !customData.contains(DISPLAY_BLOCK_ID)) {
+        if (customData == null || !customData.copyTag().contains(DISPLAY_BLOCK_ID)) {
             return;
         }
 
