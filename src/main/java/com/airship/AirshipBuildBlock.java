@@ -1,7 +1,5 @@
 package com.airship;
 
-import java.util.List;
-
 import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
@@ -21,6 +19,8 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.phys.BlockHitResult;
 
+import java.util.List;
+
 public class AirshipBuildBlock extends BaseEntityBlock {
     public static final net.minecraft.world.level.block.state.properties.BooleanProperty HAS_TEXTURE =
             net.minecraft.world.level.block.state.properties.BooleanProperty.create("has_texture");
@@ -37,7 +37,7 @@ public class AirshipBuildBlock extends BaseEntityBlock {
 
     @Override
     protected List<ItemStack> getDrops(BlockState state, LootParams.Builder params) {
-        return List.of();
+        return List.of(new ItemStack(ModBlocks.AIRSHIP_BUILD));
     }
 
     @Override
