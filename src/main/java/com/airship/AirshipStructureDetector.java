@@ -35,6 +35,10 @@ public final class AirshipStructureDetector {
                 }
 
                 BlockState state = level.getBlockState(next);
+                if (state.is(ModBlocks.AIRSHIP_BUILD)) {
+                    continue;
+                }
+
                 if (state.isAir()) {
                     continue;
                 }
