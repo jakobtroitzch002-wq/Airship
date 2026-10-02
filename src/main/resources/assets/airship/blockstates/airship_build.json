@@ -1,6 +1,9 @@
 {
   "variants": {
-    "": {
+    "has_texture=false": {
+      "model": "airship:block/airship_build_frame"
+    },
+    "has_texture=true": {
       "model": "airship:block/airship_build"
     }
   }
