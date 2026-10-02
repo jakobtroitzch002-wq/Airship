@@ -5,6 +5,5 @@ import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
 
 public class AirshipBuildBlockRenderState extends BlockEntityRenderState {
     public final BlockModelRenderState blockModel = new BlockModelRenderState();
-    public final BlockModelRenderState frameModel = new BlockModelRenderState();
     public boolean hasCustomTexture;
 }
