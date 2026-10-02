@@ -1,15 +1,20 @@
 package com.airship;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.nbt.CompoundTag;
 
 public class AirshipBuildBlockEntity extends BlockEntity {
-    private BlockState displayState = Blocks.IRON_BLOCK.defaultBlockState();
+    private BlockState displayState = Blocks.AIR.defaultBlockState();
     private boolean hasCustomTexture;
 
     public AirshipBuildBlockEntity(BlockPos pos, BlockState state) {
@@ -26,12 +31,18 @@ public class AirshipBuildBlockEntity extends BlockEntity {
 
     public void setDisplayState(BlockState displayState) {
         this.displayState = displayState;
-        this.hasCustomTexture = true;
+        this.hasCustomTexture = !displayState.isAir();
         setChanged();
+    }
 
-        if (level != null) {
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
+    @Override
+    public void setChanged() {
+        super.setChanged();
+        if (level == null) {
+            return;
         }
+        BlockState state = getBlockState();
+        level.sendBlockUpdated(worldPosition, state, state, Block.UPDATE_ALL);
     }
 
     @Override
@@ -48,6 +59,16 @@ public class AirshipBuildBlockEntity extends BlockEntity {
         super.loadAdditional(input);
         hasCustomTexture = input.getBooleanOr("has_custom_texture", false);
         displayState = input.read("display_block", BlockState.CODEC)
-                .orElse(Blocks.IRON_BLOCK.defaultBlockState());
+                .orElse(Blocks.AIR.defaultBlockState());
+    }
+
+    @Override
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        return saveWithoutMetadata(registries);
+    }
+
+    @Override
+    public Packet<ClientGamePacketListener> getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
     }
 }
