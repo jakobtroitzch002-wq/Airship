@@ -16,6 +16,7 @@ public final class AirshipMod implements ModInitializer {
     @Override
     public void onInitialize() {
         ModBlocks.initialize();
+        ModBlockEntities.initialize();
 
         PayloadTypeRegistry.serverboundPlay().register(
                 AirshipControlPayload.TYPE,
