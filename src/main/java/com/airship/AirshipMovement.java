@@ -9,6 +9,8 @@ import net.minecraft.core.Direction;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.level.entity.EntityTypeTest;
 
 public final class AirshipMovement {
     private AirshipMovement() {
@@ -38,7 +40,16 @@ public final class AirshipMovement {
         }
 
         List<Entity> passengers = new ArrayList<>();
-        for (Entity entity : level.getEntities().getAll()) {
+        for (Entity entity : level.getEntities(EntityTypeTest.forClass(Entity.class),
+                    new AABB(
+                            result.blocks().stream().mapToDouble(BlockPos::getX).min().orElse(0.0) - 1.0,
+                            result.blocks().stream().mapToDouble(BlockPos::getY).min().orElse(0.0) - 1.0,
+                            result.blocks().stream().mapToDouble(BlockPos::getZ).min().orElse(0.0) - 1.0,
+                            result.blocks().stream().mapToDouble(BlockPos::getX).max().orElse(0.0) + 2.0,
+                            result.blocks().stream().mapToDouble(BlockPos::getY).max().orElse(0.0) + 2.0,
+                            result.blocks().stream().mapToDouble(BlockPos::getZ).max().orElse(0.0) + 2.0
+                    ),
+                    entity -> true)) {
             if (!entity.isAlive()) {
                 continue;
             }
