@@ -85,15 +85,11 @@ public class AirshipBuildBlock extends BaseEntityBlock {
 
         String blockId = customData.copyTag().getString(DISPLAY_BLOCK_ID).orElse("");
         Identifier id = Identifier.tryParse(blockId);
-        if (id == null) {
+        if (id == null || !BuiltInRegistries.BLOCK.containsKey(id)) {
             return;
         }
 
-        Block block = BuiltInRegistries.BLOCK.get(id).orElse(null);
-        if (block == null) {
-            return;
-        }
-
+        Block block = BuiltInRegistries.BLOCK.get(id).value();
         BlockState displayState = block.defaultBlockState();
         if (displayState.isSolidRender()) {
             buildEntity.setDisplayState(displayState);
