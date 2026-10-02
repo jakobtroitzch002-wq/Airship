@@ -33,6 +33,9 @@ public class AirshipBuildBlockEntity extends BlockEntity {
         this.displayState = displayState;
         this.hasCustomTexture = !displayState.isAir();
         setChanged();
+        if (level != null) {
+            level.setBlock(worldPosition, getBlockState().setValue(AirshipBuildBlock.HAS_TEXTURE, hasCustomTexture), Block.UPDATE_ALL);
+        }
     }
 
     @Override
