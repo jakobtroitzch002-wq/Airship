@@ -46,6 +46,10 @@ public final class AirshipStructureRegistry {
     }
 
     public static void onBlockPlaced(Level level, BlockPos pos) {
+        if (level.getBlockState(pos).is(ModBlocks.AIRSHIP_BUILD)) {
+            return;
+        }
+
         List<Set<BlockPos>> structures = AIRSHIPS.get(level);
 
         if (structures == null) {
