@@ -6,7 +6,7 @@ import java.util.List;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -37,19 +37,14 @@ public final class AirshipMovement {
             states.add(level.getBlockState(source));
         }
 
-        List<Player> passengers = new ArrayList<>();
-        for (Player player : level.players()) {
-            BlockPos playerFeet = BlockPos.containing(
-                    player.getX(),
-                    player.getY() - 0.01,
-                    player.getZ()
-            );
+        List<Entity> passengers = new ArrayList<>();
+        for (Entity entity : level.getEntities().getAll()) {
+            if (!entity.isAlive()) {
+                continue;
+            }
 
-            BlockPos playerBelow = playerFeet.below();
-
-            if (result.blocks().contains(playerFeet)
-                    || result.blocks().contains(playerBelow)) {
-                passengers.add(player);
+            if (isOnAirship(entity, result.blocks())) {
+                passengers.add(entity);
             }
         }
 
@@ -65,15 +60,33 @@ public final class AirshipMovement {
 
         AirshipStructureRegistry.move(level, result.blocks(), offset);
 
-        for (Player player : passengers) {
-            player.setPos(
-                    player.getX() + offset.getX(),
-                    player.getY() + offset.getY(),
-                    player.getZ() + offset.getZ()
+        for (Entity entity : passengers) {
+            entity.setPos(
+                    entity.getX() + offset.getX(),
+                    entity.getY() + offset.getY(),
+                    entity.getZ() + offset.getZ()
             );
+            entity.setDeltaMovement(
+                    entity.getDeltaMovement().x,
+                    entity.getDeltaMovement().y,
+                    entity.getDeltaMovement().z
+            );
+            entity.resetFallDistance();
         }
 
         return true;
+    }
+
+    private static boolean isOnAirship(Entity entity, java.util.Set<BlockPos> structure) {
+        BlockPos feet = BlockPos.containing(
+                entity.getX(),
+                entity.getBoundingBox().minY - 0.01,
+                entity.getZ()
+        );
+
+        BlockPos below = feet.below();
+
+        return structure.contains(feet) || structure.contains(below);
     }
 
     private static int movementCoordinate(BlockPos pos, Direction direction) {
