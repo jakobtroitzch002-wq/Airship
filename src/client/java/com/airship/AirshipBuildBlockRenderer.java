@@ -46,12 +46,6 @@ public class AirshipBuildBlockRenderer implements BlockEntityRenderer<
                     blockEntity.getDisplayState(),
                     DISPLAY_CONTEXT
             );
-        } else {
-            blockModelResolver.update(
-                    state.frameModel,
-                    ModBlocks.AIRSHIP_BUILD.defaultBlockState(),
-                    DISPLAY_CONTEXT
-            );
         }
     }
 
