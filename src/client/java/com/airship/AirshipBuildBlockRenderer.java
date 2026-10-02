@@ -7,8 +7,8 @@ import net.minecraft.client.renderer.block.model.BlockDisplayContext;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
-import net.minecraft.client.renderer.feature.SubmitNodeCollector;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.core.BlockPos;
 
 public class AirshipBuildBlockRenderer implements BlockEntityRenderer<
@@ -33,7 +33,7 @@ public class AirshipBuildBlockRenderer implements BlockEntityRenderer<
             AirshipBuildBlockRenderState state,
             float partialTick,
             net.minecraft.world.phys.Vec3 cameraPosition,
-            BlockEntityRenderState.CrumblingOverlay breakProgress
+            net.minecraft.client.renderer.feature.ModelFeatureRenderer.CrumblingOverlay breakProgress
     ) {
         BlockEntityRenderer.super.extractRenderState(
                 blockEntity, state, partialTick, cameraPosition, breakProgress
