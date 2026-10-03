@@ -40,12 +40,17 @@ public class AirshipBuildBlockRenderer implements BlockEntityRenderer<
 
         state.hasCustomTexture = blockEntity.hasCustomTexture();
 
+        // BlockModelResolver.update() clears the previous model before filling it.
+        // When the build block is empty, nothing is submitted here. When it is
+        // filled, the only geometry submitted by this renderer is the contained block.
         if (state.hasCustomTexture) {
             blockModelResolver.update(
                     state.blockModel,
                     blockEntity.getDisplayState(),
                     DISPLAY_CONTEXT
             );
+        } else {
+            state.blockModel.clear();
         }
     }
 
@@ -56,10 +61,14 @@ public class AirshipBuildBlockRenderer implements BlockEntityRenderer<
             SubmitNodeCollector collector,
             CameraRenderState camera
     ) {
-        if (!state.hasCustomTexture) {
+        if (!state.hasCustomTexture || state.blockModel.isEmpty()) {
             return;
         }
 
+        // Render the contained block slightly inset so its faces cannot z-fight
+        // with the boundary block or leak texture fragments around its edges.
+        poseStack.pushPose();
+        poseStack.translate(0.01F, 0.01F, 0.01F);
         state.blockModel.submit(
                 poseStack,
                 collector,
@@ -67,5 +76,6 @@ public class AirshipBuildBlockRenderer implements BlockEntityRenderer<
                 OverlayTexture.NO_OVERLAY,
                 0
         );
+        poseStack.popPose();
     }
 }
