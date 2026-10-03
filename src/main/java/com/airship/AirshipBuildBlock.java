@@ -7,6 +7,7 @@ import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.NbtOps;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
@@ -14,6 +15,8 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
+import net.minecraft.world.item.component.Tool;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
@@ -39,6 +42,35 @@ public class AirshipBuildBlock extends BaseEntityBlock {
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(HAS_TEXTURE);
+    }
+
+    @Override
+    protected float getDestroyProgress(BlockState state, Player player, BlockGetter level, BlockPos pos) {
+        float destroySpeed = state.getDestroySpeed(level, pos);
+        if (destroySpeed == -1.0F) {
+            return 0.0F;
+        }
+
+        float miningSpeed = player.getDestroySpeed(state);
+        ItemStack held = player.getMainHandItem();
+
+        // 26.3 moved vanilla hoes to the data-driven Tool component. The normal
+        // block-tag path is kept as well, but use the hoe's component speed as a
+        // fallback so this block still gets the proper tier speed if the tag is
+        // not present on an already-running world/resource reload.
+        if (held.is(ItemTags.HOES)) {
+            Tool tool = held.get(DataComponents.TOOL);
+            if (tool != null) {
+                float componentSpeed = tool.rules().stream()
+                        .flatMap(rule -> rule.speed().stream())
+                        .max(Float::compare)
+                        .orElse(tool.defaultMiningSpeed());
+                miningSpeed = Math.max(miningSpeed, componentSpeed);
+            }
+        }
+
+        int modifier = held.is(ItemTags.HOES) || player.hasCorrectToolForDrops(state) ? 30 : 100;
+        return miningSpeed / destroySpeed / (float) modifier;
     }
 
     @Override
