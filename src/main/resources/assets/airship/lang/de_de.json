@@ -1,0 +1,8 @@
+{
+  "block.airship.airship_core": "Luftschiff-Kern",
+  "block.airship.airship_balloon": "Luftschiff-Ballon",
+  "block.airship.airship_engine": "Luftschiff-Antrieb",
+  "block.airship.airship_seat": "Luftschiff-Sitz",
+  "block.airship.airship_build": "Luftschiff-Baublock",
+  "entity.airship.airship": "Luftschiff"
+}

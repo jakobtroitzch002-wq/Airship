@@ -2,5 +2,7 @@
   "block.airship.airship_core": "Airship Core",
   "block.airship.airship_balloon": "Airship Balloon",
   "block.airship.airship_engine": "Airship Engine",
-  "block.airship.airship_build": "Airship Build Block"
+  "block.airship.airship_seat": "Airship Seat",
+  "block.airship.airship_build": "Airship Build Block",
+  "entity.airship.airship": "Airship"
 }

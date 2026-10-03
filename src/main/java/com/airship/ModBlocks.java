@@ -21,18 +21,22 @@ public final class ModBlocks {
     public static final ResourceKey<Item> AIRSHIP_BALLOON_ITEM_KEY = itemKey("airship_balloon");
     public static final ResourceKey<Block> AIRSHIP_ENGINE_KEY = key("airship_engine");
     public static final ResourceKey<Item> AIRSHIP_ENGINE_ITEM_KEY = itemKey("airship_engine");
+    public static final ResourceKey<Block> AIRSHIP_SEAT_KEY = key("airship_seat");
+    public static final ResourceKey<Item> AIRSHIP_SEAT_ITEM_KEY = itemKey("airship_seat");
     public static final ResourceKey<Block> AIRSHIP_BUILD_KEY = key("airship_build");
     public static final ResourceKey<Item> AIRSHIP_BUILD_ITEM_KEY = itemKey("airship_build");
 
     public static final Block AIRSHIP_CORE = register(AIRSHIP_CORE_KEY, AirshipCoreBlock::new, BlockBehaviour.Properties.of());
     public static final Block AIRSHIP_BALLOON = register(AIRSHIP_BALLOON_KEY, Block::new, BlockBehaviour.Properties.of());
-    public static final Block AIRSHIP_ENGINE = register(AIRSHIP_ENGINE_KEY, Block::new, BlockBehaviour.Properties.of());
+    public static final Block AIRSHIP_ENGINE = register(AIRSHIP_ENGINE_KEY, AirshipEngineBlock::new, BlockBehaviour.Properties.of());
+    public static final Block AIRSHIP_SEAT = register(AIRSHIP_SEAT_KEY, AirshipSeatBlock::new, BlockBehaviour.Properties.of().noOcclusion().strength(1.0F));
     public static final Block AIRSHIP_BUILD = register(AIRSHIP_BUILD_KEY, AirshipBuildBlock::new, BlockBehaviour.Properties.of().noOcclusion().strength(0.5F).sound(SoundType.GRASS));
 
     static {
         registerBlockItem(AIRSHIP_CORE, AIRSHIP_CORE_ITEM_KEY);
         registerBlockItem(AIRSHIP_BALLOON, AIRSHIP_BALLOON_ITEM_KEY);
         registerBlockItem(AIRSHIP_ENGINE, AIRSHIP_ENGINE_ITEM_KEY);
+        registerBlockItem(AIRSHIP_SEAT, AIRSHIP_SEAT_ITEM_KEY);
         registerBlockItem(AIRSHIP_BUILD, AIRSHIP_BUILD_ITEM_KEY);
     }
 
@@ -48,6 +52,7 @@ public final class ModBlocks {
             entries.accept(AIRSHIP_CORE.asItem());
             entries.accept(AIRSHIP_BALLOON.asItem());
             entries.accept(AIRSHIP_ENGINE.asItem());
+            entries.accept(AIRSHIP_SEAT.asItem());
             entries.accept(AIRSHIP_BUILD.asItem());
         });
     }

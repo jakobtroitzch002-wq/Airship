@@ -1,77 +1,64 @@
 package com.airship;
 
-import com.mojang.blaze3d.platform.InputConstants;
-
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.Options;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
-import net.minecraft.client.KeyMapping;
+import net.minecraft.world.entity.Entity;
 
 public final class AirshipClient implements ClientModInitializer {
-    private static final KeyMapping FORWARD = KeyMappingHelper.registerKeyMapping(
-            new KeyMapping(
-                    "key.airship.forward",
-                    InputConstants.KEY_UP,
-                    KeyMapping.Category.MISC
-            )
-    );
-
-    private static final KeyMapping BACKWARD = KeyMappingHelper.registerKeyMapping(
-            new KeyMapping(
-                    "key.airship.backward",
-                    InputConstants.KEY_DOWN,
-                    KeyMapping.Category.MISC
-            )
-    );
-
-    private static final KeyMapping LEFT = KeyMappingHelper.registerKeyMapping(
-            new KeyMapping(
-                    "key.airship.left",
-                    InputConstants.KEY_LEFT,
-                    KeyMapping.Category.MISC
-            )
-    );
-
-    private static final KeyMapping RIGHT = KeyMappingHelper.registerKeyMapping(
-            new KeyMapping(
-                    "key.airship.right",
-                    InputConstants.KEY_RIGHT,
-                    KeyMapping.Category.MISC
-            )
-    );
-
+    private static int lastSentFlags = -1;
     private static int tickCounter;
 
     @Override
     public void onInitializeClient() {
         BlockEntityRenderers.register(ModBlockEntities.AIRSHIP_BUILD, AirshipBuildBlockRenderer::new);
+        EntityRendererRegistry.register(ModEntities.AIRSHIP, AirshipEntityRenderer::new);
 
+        // Block data of a ship: apply it now if the entity exists, otherwise park it until it does.
+        ClientPlayNetworking.registerGlobalReceiver(AirshipBlocksPayload.TYPE, (payload, context) -> {
+            Minecraft client = Minecraft.getInstance();
+            Entity entity = client.level == null ? null : client.level.getEntity(payload.entityId());
+            if (entity instanceof AirshipEntity ship) {
+                ship.setClientCells(payload.cells());
+            } else {
+                AirshipPendingCells.put(payload.entityId(), payload.cells());
+            }
+        });
+
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+            AirshipPendingCells.clear();
+            lastSentFlags = -1;
+        });
+
+        // While sitting in an airship, report the movement keys to the server.
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            if (client.player == null || client.level == null) {
+            if (client.player == null || !(client.player.getVehicle() instanceof AirshipEntity)) {
+                lastSentFlags = -1;
                 return;
+            }
+
+            int flags = 0;
+            if (client.screen == null) {
+                Options options = client.options;
+                if (options.keyUp.isDown()) flags |= AirshipControlPayload.FORWARD;
+                if (options.keyDown.isDown()) flags |= AirshipControlPayload.BACKWARD;
+                if (options.keyLeft.isDown()) flags |= AirshipControlPayload.LEFT;
+                if (options.keyRight.isDown()) flags |= AirshipControlPayload.RIGHT;
+                if (options.keyJump.isDown()) flags |= AirshipControlPayload.UP;
+                if (options.keySprint.isDown()) flags |= AirshipControlPayload.DOWN;
             }
 
             tickCounter++;
-
-            if (tickCounter % 4 != 0) {
-                return;
-            }
-
-            if (FORWARD.isDown()) {
-                send(AirshipControlPayload.FORWARD);
-            } else if (BACKWARD.isDown()) {
-                send(AirshipControlPayload.BACKWARD);
-            } else if (LEFT.isDown()) {
-                send(AirshipControlPayload.LEFT);
-            } else if (RIGHT.isDown()) {
-                send(AirshipControlPayload.RIGHT);
+            // Send on change, plus a heartbeat so the server knows the keys are still held.
+            if (flags != lastSentFlags || tickCounter % 5 == 0) {
+                ClientPlayNetworking.send(new AirshipControlPayload(flags));
+                lastSentFlags = flags;
             }
         });
-    }
-
-    private static void send(int direction) {
-        ClientPlayNetworking.send(new AirshipControlPayload(direction));
     }
 }

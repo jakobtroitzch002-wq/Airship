@@ -22,6 +22,8 @@ public final class AirshipStructureDetector {
                 BlockState state = level.getBlockState(next);
                 if (ModBlocks.isAirshipBuildBlock(state.getBlock())) continue;
                 if (state.isAir()) continue;
+                // Grass, snow layers, water etc. are not part of a ship.
+                if (state.canBeReplaced()) continue;
                 if (found.size() >= MAX_BLOCKS) { capped = true; queue.clear(); break; }
                 BlockPos immutable = next.immutable(); found.add(immutable); queue.addLast(immutable);
             }
