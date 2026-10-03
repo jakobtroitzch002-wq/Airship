@@ -18,6 +18,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.TagValueInput;
@@ -128,20 +129,23 @@ public final class AirshipAssembler {
             rider.startRiding(ship, true, true);
         }
 
-        tell(player, "Airship ready. W/A/S/D move relative to your view, Space up, Ctrl down, Shift leaves the seat.");
+        tell(player, "Airship ready. W/A/S/D move, Space up, Ctrl down, Shift leaves the seat. Land: stand next to it and sneak + right-click.");
         return InteractionResult.SUCCESS;
     }
 
     // ------------------------------------------------------------------ disassemble
 
-    /** Turns the ship back into blocks. Returns false if there is no free space to land. */
+    /**
+     * Turns the ship back into blocks, snapped to the nearest 90 degrees.
+     * Returns false if there is no free space to land.
+     */
     public static boolean disassemble(ServerLevel level, AirshipEntity ship) {
-        BlockPos anchor = findLandingAnchor(level, ship);
+        List<AirshipCell> cells = snappedCells(ship);
+        BlockPos anchor = findLandingAnchor(level, ship, cells);
         if (anchor == null) {
             return false;
         }
 
-        List<AirshipCell> cells = ship.getCellsWithFuel();
         for (AirshipCell cell : cells) {
             level.setBlock(anchor.offset(cell.pos()), cell.state(), WRITE_FLAGS);
         }
@@ -166,20 +170,48 @@ public final class AirshipAssembler {
         return true;
     }
 
-    private static BlockPos findLandingAnchor(ServerLevel level, AirshipEntity ship) {
+    /** The ship's cells rotated by the ship's yaw, rounded to a multiple of 90 degrees. */
+    private static List<AirshipCell> snappedCells(AirshipEntity ship) {
+        int quarterTurns = Math.floorMod(Math.round(ship.getYRot() / 90.0F), 4);
+        Rotation rotation = switch (quarterTurns) {
+            case 1 -> Rotation.CLOCKWISE_90;
+            case 2 -> Rotation.CLOCKWISE_180;
+            case 3 -> Rotation.COUNTERCLOCKWISE_90;
+            default -> Rotation.NONE;
+        };
+
+        List<AirshipCell> result = new ArrayList<>();
+        for (AirshipCell cell : ship.getCellsWithFuel()) {
+            int x = cell.pos().getX();
+            int z = cell.pos().getZ();
+            for (int i = 0; i < quarterTurns; i++) {
+                int rotatedX = -z;
+                z = x;
+                x = rotatedX;
+            }
+            result.add(new AirshipCell(
+                    new BlockPos(x, cell.pos().getY(), z),
+                    cell.state().rotate(rotation),
+                    cell.blockEntity(),
+                    cell.fuel()));
+        }
+        return result;
+    }
+
+    private static BlockPos findLandingAnchor(ServerLevel level, AirshipEntity ship, List<AirshipCell> cells) {
         BlockPos base = BlockPos.containing(
                 Math.round(ship.getX() - 0.5), Math.round(ship.getY()), Math.round(ship.getZ() - 0.5));
         for (int[] offset : LANDING_OFFSETS) {
             BlockPos anchor = base.offset(offset[0], offset[1], offset[2]);
-            if (fits(level, ship, anchor)) {
+            if (fits(level, cells, anchor)) {
                 return anchor;
             }
         }
         return null;
     }
 
-    private static boolean fits(ServerLevel level, AirshipEntity ship, BlockPos anchor) {
-        for (AirshipCell cell : ship.getCells()) {
+    private static boolean fits(ServerLevel level, List<AirshipCell> cells, BlockPos anchor) {
+        for (AirshipCell cell : cells) {
             BlockPos target = anchor.offset(cell.pos());
             if (level.isOutsideBuildHeight(target) || !level.hasChunkAt(target)) {
                 return false;

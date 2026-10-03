@@ -5,4 +5,10 @@ import net.minecraft.client.renderer.entity.state.EntityRenderState;
 
 public class AirshipEntityRenderState extends EntityRenderState {
     public List<AirshipRenderPart> parts = List.of();
+    /** Difference between the smoothed ship position and the position the base renderer uses. */
+    public double offsetX;
+    public double offsetY;
+    public double offsetZ;
+    /** Smoothed yaw of the ship in degrees. */
+    public float yaw;
 }

@@ -1,5 +1,5 @@
 package com.airship;
- 
+
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
@@ -9,16 +9,16 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
 import net.minecraft.world.entity.Entity;
- 
+
 public final class AirshipClient implements ClientModInitializer {
     private static int lastSentFlags = -1;
     private static int tickCounter;
- 
+
     @Override
     public void onInitializeClient() {
         BlockEntityRenderers.register(ModBlockEntities.AIRSHIP_BUILD, AirshipBuildBlockRenderer::new);
         EntityRendererRegistry.register(ModEntities.AIRSHIP, AirshipEntityRenderer::new);
- 
+
         // Block data of a ship: apply it now if the entity exists, otherwise park it until it does.
         ClientPlayNetworking.registerGlobalReceiver(AirshipBlocksPayload.TYPE, (payload, context) -> {
             Minecraft client = Minecraft.getInstance();
@@ -29,19 +29,19 @@ public final class AirshipClient implements ClientModInitializer {
                 AirshipPendingCells.put(payload.entityId(), payload.cells());
             }
         });
- 
+
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             AirshipPendingCells.clear();
             lastSentFlags = -1;
         });
- 
+
         // While sitting in an airship, report the movement keys to the server.
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (client.player == null || !(client.player.getVehicle() instanceof AirshipEntity)) {
                 lastSentFlags = -1;
                 return;
             }
- 
+
             int flags = 0;
             if (client.gui.screen() == null) {
                 Options options = client.options;
@@ -52,7 +52,7 @@ public final class AirshipClient implements ClientModInitializer {
                 if (options.keyJump.isDown()) flags |= AirshipControlPayload.UP;
                 if (options.keySprint.isDown()) flags |= AirshipControlPayload.DOWN;
             }
- 
+
             tickCounter++;
             // Send on change, plus a heartbeat so the server knows the keys are still held.
             if (flags != lastSentFlags || tickCounter % 5 == 0) {
@@ -62,4 +62,3 @@ public final class AirshipClient implements ClientModInitializer {
         });
     }
 }
- 

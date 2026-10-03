@@ -2,7 +2,6 @@ package com.airship;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,7 +17,6 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
@@ -26,11 +24,9 @@ import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * An assembled, flying airship. All blocks of the ship live inside this entity
- * (relative to the former Core position) until the ship lands and is disassembled.
- * <p>
- * The ship never rotates in this version: it only translates. The pilot (first passenger)
- * steers relative to their look direction, similar to a happy ghast.
+ * An assembled airship. All blocks of the ship live inside this entity (relative to the former
+ * Core position). The ship stays assembled until a player lands it (sneak + right-click),
+ * hovers in place when nobody is flying it, and turns to face the way the pilot looks.
  */
 public class AirshipEntity extends Entity {
     // --- flight tuning (blocks per tick) ---
@@ -38,22 +34,31 @@ public class AirshipEntity extends Entity {
     private static final double ENGINE_BOOST = 0.22;
     private static final double ENGINE_FALLOFF = 0.70;
     private static final double VERTICAL_SPEED = 0.08;
-    private static final double SINK_SPEED = 0.06;
     private static final double HORIZONTAL_ACCEL = 0.012;
     private static final double VERTICAL_ACCEL = 0.02;
-    private static final int LAND_RETRY_TICKS = 20;
+    /** Maximum turn rate in degrees per tick. */
+    private static final float MAX_TURN = 3.5F;
 
     private List<AirshipCell> cells = List.of();
     private final Map<BlockPos, BlockState> stateByPos = new HashMap<>();
     private final Map<BlockPos, Integer> engineFuel = new HashMap<>();
     private List<Vec3> seats = List.of();
-    private Map<Direction, BlockPos[]> leading;
+    private BlockPos[] surface;
+    private int[] surfaceMask;
     private List<AirshipClientCell> exposed;
     private int cellVersion;
 
+    // server only
     private Vec3 velocity = Vec3.ZERO;
-    private int groundTicks;
-    private int landCooldown;
+    private ServerPlayer lastPilot;
+    private float yawOffset;
+
+    // client only: positions of the last two ticks, used to render smoothly between them
+    private Vec3 prevPos;
+    private Vec3 curPos;
+    private float prevYaw;
+    private float curYaw;
+    private boolean smoothReady;
 
     public AirshipEntity(EntityType<? extends AirshipEntity> type, Level level) {
         super(type, level);
@@ -93,14 +98,15 @@ public class AirshipEntity extends Entity {
                 found.add(new Vec3(p.getX(), p.getY() + AirshipSeatBlock.SEAT_HEIGHT, p.getZ()));
             }
         }
-        // Seats closest to the Core come first, so the player who started the ship gets the "best" one.
+        // Seats closest to the Core come first.
         found.sort(Comparator.comparingDouble(Vec3::lengthSqr)
                 .thenComparingDouble(v -> v.y)
                 .thenComparingDouble(v -> v.x)
                 .thenComparingDouble(v -> v.z));
         this.seats = List.copyOf(found);
 
-        this.leading = null;
+        this.surface = null;
+        this.surfaceMask = null;
         this.exposed = null;
         this.cellVersion++;
     }
@@ -155,26 +161,42 @@ public class AirshipEntity extends Entity {
         return exposed;
     }
 
-    public BlockPos[] leadingCells(Direction direction) {
-        if (leading == null) {
-            Map<Direction, List<BlockPos>> lists = new EnumMap<>(Direction.class);
+    private void buildSurface() {
+        List<BlockPos> cellsOut = new ArrayList<>();
+        List<Integer> masksOut = new ArrayList<>();
+        for (BlockPos pos : stateByPos.keySet()) {
+            int mask = 0;
             for (Direction d : Direction.values()) {
-                lists.put(d, new ArrayList<>());
-            }
-            for (BlockPos pos : stateByPos.keySet()) {
-                for (Direction d : Direction.values()) {
-                    if (!stateByPos.containsKey(pos.relative(d))) {
-                        lists.get(d).add(pos);
-                    }
+                if (!stateByPos.containsKey(pos.relative(d))) {
+                    mask |= 1 << d.ordinal();
                 }
             }
-            Map<Direction, BlockPos[]> arrays = new EnumMap<>(Direction.class);
-            for (Direction d : Direction.values()) {
-                arrays.put(d, lists.get(d).toArray(new BlockPos[0]));
+            if (mask != 0) {
+                cellsOut.add(pos);
+                masksOut.add(mask);
             }
-            leading = arrays;
         }
-        return leading.get(direction);
+        surface = cellsOut.toArray(new BlockPos[0]);
+        surfaceMask = new int[masksOut.size()];
+        for (int i = 0; i < surfaceMask.length; i++) {
+            surfaceMask[i] = masksOut.get(i);
+        }
+    }
+
+    /** Cells with at least one exposed face (relative to the Core). */
+    public BlockPos[] surfaceCells() {
+        if (surface == null) {
+            buildSurface();
+        }
+        return surface;
+    }
+
+    /** For each surface cell: bit (1 << Direction.ordinal()) is set if that local face is exposed. */
+    public int[] surfaceMasks() {
+        if (surfaceMask == null) {
+            buildSurface();
+        }
+        return surfaceMask;
     }
 
     public int getFuel(BlockPos relativePos) {
@@ -202,7 +224,17 @@ public class AirshipEntity extends Entity {
         return false;
     }
 
+    /** Pickable so players can right-click the ship to board it or to land it. */
+    @Override
+    public boolean isPickable() {
+        return true;
+    }
+
     // ------------------------------------------------------------------ seats
+
+    private Vec3 toWorldOffset(Vec3 local) {
+        return local.yRot((float) -Math.toRadians(getYRot()));
+    }
 
     @Override
     public boolean canAddPassenger(Entity passenger) {
@@ -215,7 +247,7 @@ public class AirshipEntity extends Entity {
             return Vec3.ZERO;
         }
         int index = Math.max(0, getPassengers().indexOf(passenger));
-        return seats.get(index % seats.size());
+        return toWorldOffset(seats.get(index % seats.size()));
     }
 
     @Override
@@ -224,16 +256,36 @@ public class AirshipEntity extends Entity {
             return super.getDismountLocationForPassenger(passenger);
         }
         // Put the player back on the seat they were sitting on.
-        Vec3 best = seats.get(0);
+        Vec3 best = position().add(toWorldOffset(seats.get(0)));
         double bestDistance = Double.MAX_VALUE;
         for (Vec3 seat : seats) {
-            double distance = position().add(seat).distanceToSqr(passenger.position());
+            Vec3 world = position().add(toWorldOffset(seat));
+            double distance = world.distanceToSqr(passenger.position());
             if (distance < bestDistance) {
                 bestDistance = distance;
-                best = seat;
+                best = world;
             }
         }
-        return position().add(best);
+        return best;
+    }
+
+    // ------------------------------------------------------------------ smooth rendering (client)
+
+    public Vec3 getSmoothPos(float partialTick) {
+        if (!smoothReady) {
+            return position();
+        }
+        return new Vec3(
+                Mth.lerp(partialTick, prevPos.x, curPos.x),
+                Mth.lerp(partialTick, prevPos.y, curPos.y),
+                Mth.lerp(partialTick, prevPos.z, curPos.z));
+    }
+
+    public float getSmoothYaw(float partialTick) {
+        if (!smoothReady) {
+            return getYRot();
+        }
+        return prevYaw + Mth.wrapDegrees(curYaw - prevYaw) * partialTick;
     }
 
     // ------------------------------------------------------------------ ticking
@@ -255,6 +307,21 @@ public class AirshipEntity extends Entity {
                 setClientCells(pending);
             }
         }
+
+        // The server sends the position 20 times per second. Remember the last two positions so the
+        // renderer can blend between them instead of jumping.
+        if (!smoothReady) {
+            prevPos = position();
+            curPos = position();
+            prevYaw = getYRot();
+            curYaw = getYRot();
+            smoothReady = true;
+        } else {
+            prevPos = curPos;
+            prevYaw = curYaw;
+            curPos = position();
+            curYaw = getYRot();
+        }
     }
 
     private void serverTick(ServerLevel level) {
@@ -263,17 +330,32 @@ public class AirshipEntity extends Entity {
             return;
         }
 
-        boolean unpiloted = getPassengers().isEmpty();
         Entity first = getFirstPassenger();
-        int flags = 0;
-        float yaw = 0.0F;
-        if (first instanceof ServerPlayer pilot) {
-            flags = AirshipControls.flags(pilot, level.getGameTime());
-            yaw = pilot.getYRot();
+        ServerPlayer pilot = first instanceof ServerPlayer sp ? sp : null;
+        int flags = pilot == null ? 0 : AirshipControls.flags(pilot, level.getGameTime());
+
+        // --- turn towards where the pilot looks (relative to how they were facing when they sat down) ---
+        if (pilot != lastPilot) {
+            lastPilot = pilot;
+            if (pilot != null) {
+                yawOffset = Mth.wrapDegrees(getYRot() - pilot.getYRot());
+            }
+        }
+        if (pilot != null) {
+            float target = pilot.getYRot() + yawOffset;
+            float diff = Mth.wrapDegrees(target - getYRot());
+            float step = Mth.clamp(diff, -MAX_TURN, MAX_TURN);
+            if (Math.abs(step) > 1.0E-3F) {
+                float newYaw = Mth.wrapDegrees(getYRot() + step);
+                if (!AirshipCollision.collides(level, this, position(), newYaw)) {
+                    setYRot(newYaw);
+                }
+            }
         }
 
         // --- horizontal input, relative to the pilot's look direction ---
-        double yawRad = Math.toRadians(yaw);
+        float lookYaw = pilot == null ? 0.0F : pilot.getYRot();
+        double yawRad = Math.toRadians(lookYaw);
         double forwardX = -Math.sin(yawRad);
         double forwardZ = Math.cos(yawRad);
         double rightX = -Math.cos(yawRad);
@@ -319,16 +401,14 @@ public class AirshipEntity extends Entity {
         double targetX = thrusting ? inputX / length * maxSpeed : 0.0;
         double targetZ = thrusting ? inputZ / length * maxSpeed : 0.0;
 
-        // --- vertical: balloons carry the ship; no pilot means it sinks slowly ---
-        double targetY;
-        if (unpiloted) {
-            targetY = -SINK_SPEED;
-        } else if ((flags & AirshipControlPayload.UP) != 0 && (flags & AirshipControlPayload.DOWN) == 0) {
+        // --- vertical: balloons carry the ship, so with no input it simply hovers ---
+        double targetY = 0.0;
+        boolean up = (flags & AirshipControlPayload.UP) != 0;
+        boolean down = (flags & AirshipControlPayload.DOWN) != 0;
+        if (up && !down) {
             targetY = VERTICAL_SPEED;
-        } else if ((flags & AirshipControlPayload.DOWN) != 0 && (flags & AirshipControlPayload.UP) == 0) {
+        } else if (down && !up) {
             targetY = -VERTICAL_SPEED;
-        } else {
-            targetY = 0.0;
         }
 
         velocity = new Vec3(
@@ -338,32 +418,18 @@ public class AirshipEntity extends Entity {
         );
 
         // --- move with collision ---
-        AirshipCollision.Result result = AirshipCollision.move(level, this, position(), velocity);
-        double vx = result.hitX() ? 0.0 : velocity.x;
-        double vy = result.hitY() ? 0.0 : velocity.y;
-        double vz = result.hitZ() ? 0.0 : velocity.z;
-        boolean touchedGround = result.hitY() && velocity.y < 0.0;
-        velocity = new Vec3(vx, vy, vz);
-        setPos(result.pos().x, result.pos().y, result.pos().z);
+        if (velocity.lengthSqr() > 1.0E-10) {
+            AirshipCollision.Result result = AirshipCollision.move(level, this, position(), velocity);
+            velocity = new Vec3(
+                    result.hitX() ? 0.0 : velocity.x,
+                    result.hitY() ? 0.0 : velocity.y,
+                    result.hitZ() ? 0.0 : velocity.z);
+            setPos(result.pos().x, result.pos().y, result.pos().z);
+        }
         setDeltaMovement(velocity);
-
-        // --- landing: an empty ship that has touched the ground turns back into blocks ---
-        groundTicks = touchedGround ? groundTicks + 1 : 0;
-        if (landCooldown > 0) {
-            landCooldown--;
-        }
-        if (unpiloted && groundTicks >= 2 && landCooldown == 0) {
-            if (!AirshipAssembler.disassemble(level, this)) {
-                landCooldown = LAND_RETRY_TICKS;
-            }
-        }
     }
 
     private static double approach(double current, double target, double step) {
         return current + Mth.clamp(target - current, -step, step);
-    }
-
-    public boolean hasPilot() {
-        return getFirstPassenger() instanceof Player;
     }
 }

@@ -10,12 +10,14 @@ A Fabric mod for player-built airships in Minecraft 26.3.
    the structure scan never crosses a build block.
 2. **Right-click the Core.** Every block connected to it (except air and build blocks) becomes an airship.
    Everyone standing on the ship is seated automatically (so you need one seat per player).
-3. **Fly.** The first passenger is the pilot:
+3. **Fly.** The first passenger is the pilot. The ship turns to face the way you look.
    - `W/A/S/D` move relative to where you look
    - `Space` ascend, `Ctrl` descend
    - `Shift` leaves the seat
-4. **Land.** When nobody sits in the ship it sinks slowly and turns back into blocks once it touches the ground.
-   Ships fly through build blocks but need free space to land.
+4. **Hover.** When nobody flies it, the ship stays where it is.
+5. **Board again:** right-click the ship.
+6. **Land / rebuild:** with nobody sitting in it, sneak + right-click the ship. It turns back into blocks
+   (snapped to the nearest 90 degrees). Rebuild as you like, then right-click the Core again.
 
 ## Engines
 
@@ -25,6 +27,5 @@ Without fuel the ship still flies at its base speed.
 
 ## Current limitations
 
-- The ship translates only, it does not rotate.
-- Players cannot walk on the deck while it flies; they ride in seats.
+- Players cannot walk on the deck while it flies; they ride in seats. Leaving the seat mid-air means falling.
 - Blocks with special rendering (chests, signs, ...) are shown with their plain block model while flying.
