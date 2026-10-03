@@ -68,7 +68,11 @@ public class AirshipBuildBlockRenderer implements BlockEntityRenderer<
         // Render the contained block slightly inset so its faces cannot z-fight
         // with the boundary block or leak texture fragments around its edges.
         poseStack.pushPose();
-        poseStack.translate(0.01F, 0.01F, 0.01F);
+        // Keep the contained block just inside the build block volume on all
+        // sides. This prevents texture/depth artifacts at the outer boundary.
+        poseStack.translate(0.5F, 0.5F, 0.5F);
+        poseStack.scale(0.98F, 0.98F, 0.98F);
+        poseStack.translate(-0.5F, -0.5F, -0.5F);
         state.blockModel.submit(
                 poseStack,
                 collector,
