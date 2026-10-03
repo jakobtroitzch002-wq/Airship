@@ -7,19 +7,12 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 
 public final class ModBlockEntities {
-    public static final BlockEntityType<AirshipBuildBlockEntity> AIRSHIP_BUILD =
-            Registry.register(
-                    BuiltInRegistries.BLOCK_ENTITY_TYPE,
-                    Identifier.fromNamespaceAndPath(AirshipMod.MOD_ID, "airship_build"),
-                    FabricBlockEntityTypeBuilder.create(
-                            AirshipBuildBlockEntity::new,
-                            ModBlocks.AIRSHIP_BUILD
-                    ).build()
-            );
-
-    private ModBlockEntities() {
-    }
-
-    public static void initialize() {
-    }
+    public static final BlockEntityType<AirshipBuildBlockEntity> AIRSHIP_BUILD = Registry.register(
+            BuiltInRegistries.BLOCK_ENTITY_TYPE,
+            Identifier.fromNamespaceAndPath(AirshipMod.MOD_ID, "airship_build"),
+            FabricBlockEntityTypeBuilder.create(AirshipBuildBlockEntity::new,
+                    ModBlocks.AIRSHIP_BUILD, ModBlocks.AIRSHIP_BUILD_REINFORCED, ModBlocks.AIRSHIP_BUILD_PANEL).build()
+    );
+    private ModBlockEntities() {}
+    public static void initialize() {}
 }
