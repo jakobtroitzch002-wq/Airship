@@ -27,7 +27,7 @@ public final class ModBlocks {
     public static final Block AIRSHIP_CORE = register(AIRSHIP_CORE_KEY, AirshipCoreBlock::new, BlockBehaviour.Properties.of());
     public static final Block AIRSHIP_BALLOON = register(AIRSHIP_BALLOON_KEY, Block::new, BlockBehaviour.Properties.of());
     public static final Block AIRSHIP_ENGINE = register(AIRSHIP_ENGINE_KEY, Block::new, BlockBehaviour.Properties.of());
-    public static final Block AIRSHIP_BUILD = register(AIRSHIP_BUILD_KEY, AirshipBuildBlock::new, BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.GRASS));
+    public static final Block AIRSHIP_BUILD = register(AIRSHIP_BUILD_KEY, AirshipBuildBlock::new, BlockBehaviour.Properties.of().noOcclusion().strength(0.5F).sound(SoundType.GRASS));
 
     static {
         registerBlockItem(AIRSHIP_CORE, AIRSHIP_CORE_ITEM_KEY);
