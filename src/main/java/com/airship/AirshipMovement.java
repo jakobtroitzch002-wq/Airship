@@ -17,7 +17,12 @@ public final class AirshipMovement {
     }
 
     public static boolean move(Level level, AirshipStructureDetector.DetectionResult result, Direction direction) {
-        List<BlockPos> sourcePositions = new ArrayList<>(result.blocks());
+        List<BlockPos> sourcePositions = new ArrayList<>();
+        for (BlockPos pos : result.blocks()) {
+            if (!ModBlocks.isAirshipBuildBlock(level.getBlockState(pos).getBlock())) {
+                sourcePositions.add(pos);
+            }
+        }
         BlockPos offset = new BlockPos(direction.getStepX(), direction.getStepY(), direction.getStepZ());
 
         for (BlockPos source : sourcePositions) {
