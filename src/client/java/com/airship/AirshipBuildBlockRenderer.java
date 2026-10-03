@@ -40,9 +40,6 @@ public class AirshipBuildBlockRenderer implements BlockEntityRenderer<
 
         state.hasCustomTexture = blockEntity.hasCustomTexture();
 
-        // BlockModelResolver.update() clears the previous model before filling it.
-        // When the build block is empty, nothing is submitted here. When it is
-        // filled, the only geometry submitted by this renderer is the contained block.
         if (state.hasCustomTexture) {
             blockModelResolver.update(
                     state.blockModel,
@@ -65,21 +62,22 @@ public class AirshipBuildBlockRenderer implements BlockEntityRenderer<
             return;
         }
 
-        // Render the contained block slightly inset so its faces cannot z-fight
-        // with the boundary block or leak texture fragments around its edges.
         poseStack.pushPose();
-        // Keep the contained block just inside the build block volume on all
-        // sides. This prevents texture/depth artifacts at the outer boundary.
         poseStack.translate(0.5F, 0.5F, 0.5F);
         poseStack.scale(0.98F, 0.98F, 0.98F);
         poseStack.translate(-0.5F, -0.5F, -0.5F);
+
+        // Use the real light level at the build block instead of hard-coded
+        // fullbright lighting. This makes inserted blocks react to day/night,
+        // torches, caves, etc. exactly like normal blocks.
         state.blockModel.submit(
                 poseStack,
                 collector,
-                15728880,
+                state.lightCoords,
                 OverlayTexture.NO_OVERLAY,
                 0
         );
+
         poseStack.popPose();
     }
 }
