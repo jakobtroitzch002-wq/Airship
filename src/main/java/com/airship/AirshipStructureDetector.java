@@ -20,7 +20,8 @@ public final class AirshipStructureDetector {
                 BlockPos next = current.relative(direction);
                 if (found.contains(next) || !level.hasChunkAt(next)) continue;
                 BlockState state = level.getBlockState(next);
-                if (ModBlocks.isAirshipBuildBlock(state.getBlock()) || state.isAir()) continue;
+                if (ModBlocks.isAirshipBuildBlock(state.getBlock())) continue;
+                if (state.isAir()) continue;
                 if (found.size() >= MAX_BLOCKS) { capped = true; queue.clear(); break; }
                 BlockPos immutable = next.immutable(); found.add(immutable); queue.addLast(immutable);
             }
