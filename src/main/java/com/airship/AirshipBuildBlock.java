@@ -1,6 +1,7 @@
 package com.airship;
 
 import org.jetbrains.annotations.Nullable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
@@ -42,15 +43,20 @@ public class AirshipBuildBlock extends BaseEntityBlock {
 
     @Override
     protected List<ItemStack> getDrops(BlockState state, LootParams.Builder params) {
-        ItemStack drop = new ItemStack(this);
+        List<ItemStack> drops = new ArrayList<>();
         BlockEntity blockEntity = params.getOptionalParameter(LootContextParams.BLOCK_ENTITY);
+
         if (blockEntity instanceof AirshipBuildBlockEntity buildEntity && buildEntity.hasCustomTexture()) {
             BlockState displayState = buildEntity.getDisplayState();
-            BlockState.CODEC.encodeStart(NbtOps.INSTANCE, displayState).result().ifPresent(tag ->
-                    CustomData.update(DataComponents.CUSTOM_DATA, drop, root -> root.put(DISPLAY_BLOCK, tag))
-            );
+            if (!displayState.isAir()) {
+                drops.add(new ItemStack(displayState.getBlock()));
+            }
         }
-        return List.of(drop);
+
+        // The build block itself is always dropped empty. Its contents are never
+        // serialized into the dropped build block anymore.
+        drops.add(new ItemStack(this));
+        return drops;
     }
 
     @Override
@@ -73,11 +79,15 @@ public class AirshipBuildBlock extends BaseEntityBlock {
         if (!newDisplayState.isSolidRender()) return InteractionResult.PASS;
         if (level.isClientSide()) return InteractionResult.SUCCESS;
         if (!(level.getBlockEntity(pos) instanceof AirshipBuildBlockEntity buildEntity)) return InteractionResult.PASS;
+
         boolean hadOldTexture = buildEntity.hasCustomTexture();
         BlockState oldDisplayState = buildEntity.getDisplayState();
         buildEntity.setDisplayState(newDisplayState);
+
         if (!player.isCreative()) itemStack.shrink(1);
-        if (hadOldTexture) popResource(level, pos, new ItemStack(oldDisplayState.getBlock()));
+        if (hadOldTexture && !oldDisplayState.isAir()) {
+            popResource(level, pos, new ItemStack(oldDisplayState.getBlock()));
+        }
         return InteractionResult.SUCCESS;
     }
 
