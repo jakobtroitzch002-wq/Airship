@@ -8,6 +8,7 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.client.renderer.block.model.BlockDisplayContext;
 
 public class AirshipBuildBlockRenderer implements BlockEntityRenderer<
@@ -39,6 +40,13 @@ public class AirshipBuildBlockRenderer implements BlockEntityRenderer<
         );
 
         state.hasCustomTexture = blockEntity.hasCustomTexture();
+
+        if (blockEntity.getLevel() != null) {
+            state.lightCoords = LightCoordsUtil.getLightCoords(
+                    blockEntity.getLevel(),
+                    blockEntity.getBlockPos()
+            );
+        }
 
         if (state.hasCustomTexture) {
             blockModelResolver.update(
