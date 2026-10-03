@@ -2,7 +2,7 @@ package com.airship;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 
-import net.minecraft.client.renderer.LevelRenderer;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.block.BlockModelResolver;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
@@ -43,7 +43,7 @@ public class AirshipBuildBlockRenderer implements BlockEntityRenderer<
         // The build block itself is invisible while occupied, so relying on a
         // generic/default light value can make the displayed block render black.
         if (blockEntity.getLevel() != null) {
-            state.lightCoords = LevelRenderer.getLightColor(
+            state.lightCoords = LightCoordsUtil.getLightCoords(
                     blockEntity.getLevel(),
                     blockEntity.getBlockPos()
             );
