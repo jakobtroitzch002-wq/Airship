@@ -2,6 +2,7 @@ package com.airship;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 
+import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.block.BlockModelResolver;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
@@ -38,6 +39,16 @@ public class AirshipBuildBlockRenderer implements BlockEntityRenderer<
                 blockEntity, state, partialTick, cameraPosition, breakProgress
         );
 
+        // Sample the light at the actual build-block position explicitly.
+        // The build block itself is invisible while occupied, so relying on a
+        // generic/default light value can make the displayed block render black.
+        if (blockEntity.getLevel() != null) {
+            state.lightCoords = LevelRenderer.getLightColor(
+                    blockEntity.getLevel(),
+                    blockEntity.getBlockPos()
+            );
+        }
+
         state.hasCustomTexture = blockEntity.hasCustomTexture();
 
         if (state.hasCustomTexture) {
@@ -67,9 +78,6 @@ public class AirshipBuildBlockRenderer implements BlockEntityRenderer<
         poseStack.scale(0.98F, 0.98F, 0.98F);
         poseStack.translate(-0.5F, -0.5F, -0.5F);
 
-        // Use the real light level at the build block instead of hard-coded
-        // fullbright lighting. This makes inserted blocks react to day/night,
-        // torches, caves, etc. exactly like normal blocks.
         state.blockModel.submit(
                 poseStack,
                 collector,
