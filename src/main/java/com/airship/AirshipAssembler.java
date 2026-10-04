@@ -23,6 +23,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.TagValueInput;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 /** Turns a block structure into a flying {@link AirshipEntity} and back. */
 public final class AirshipAssembler {
@@ -39,18 +40,44 @@ public final class AirshipAssembler {
 
     // ------------------------------------------------------------------ assemble
 
-    public static InteractionResult assemble(Level level, BlockPos corePos, Player player) {
+    /**
+     * Assembles the structure connected to {@code startPos} (a Core or a Seat) into a flying airship.
+     * The clicking player is seated; if the click was on a seat, that seat is theirs.
+     */
+    public static InteractionResult assemble(Level level, BlockPos startPos, Player player) {
         if (!(level instanceof ServerLevel serverLevel)) {
             return InteractionResult.SUCCESS;
         }
 
-        AirshipStructureDetector.DetectionResult detection = AirshipStructureDetector.detect(level, corePos);
+        AirshipStructureDetector.DetectionResult detection = AirshipStructureDetector.detect(level, startPos);
         if (detection.capped()) {
             tell(player, "Airship is too large (maximum " + AirshipStructureDetector.MAX_BLOCKS + " blocks)");
             return InteractionResult.SUCCESS;
         }
 
         Set<BlockPos> blocks = detection.blocks();
+
+        // The Core is the anchor of the ship: use the one closest to where the player clicked.
+        BlockPos corePos = null;
+        double bestDistance = Double.MAX_VALUE;
+        for (BlockPos pos : blocks) {
+            if (level.getBlockState(pos).is(ModBlocks.AIRSHIP_CORE)) {
+                double distance = pos.distSqr(startPos);
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    corePos = pos;
+                }
+            }
+        }
+        if (corePos == null) {
+            tell(player, "No Airship Core is connected to this block");
+            return InteractionResult.SUCCESS;
+        }
+        BlockPos primarySeat = level.getBlockState(startPos).is(ModBlocks.AIRSHIP_SEAT)
+                ? new BlockPos(startPos.getX() - corePos.getX(), startPos.getY() - corePos.getY(),
+                        startPos.getZ() - corePos.getZ())
+                : null;
+
         int balloons = 0;
         int seatCount = 0;
         int engines = 0;
@@ -123,13 +150,16 @@ public final class AirshipAssembler {
         AirshipEntity ship = new AirshipEntity(ModEntities.AIRSHIP, level);
         ship.setPos(corePos.getX() + 0.5, corePos.getY(), corePos.getZ() + 0.5);
         ship.setCells(cells);
+        if (primarySeat != null) {
+            ship.setPrimarySeat(primarySeat);
+        }
         serverLevel.addFreshEntity(ship);
 
         for (ServerPlayer rider : riders) {
             rider.startRiding(ship, true, true);
         }
 
-        tell(player, "Airship ready. W/A/S/D move, Space up, Ctrl down, Shift leaves the seat. Land: stand next to it and sneak + right-click.");
+        tell(player, "Airship ready. W/A/S/D move, Space up, Ctrl down. Shift leaves the seat and lands the ship.");
         return InteractionResult.SUCCESS;
     }
 
@@ -198,9 +228,18 @@ public final class AirshipAssembler {
         return result;
     }
 
+    /** The block grid position (of the Core) a ship at this position lands on. */
+    public static BlockPos snappedAnchor(Vec3 pos) {
+        return BlockPos.containing(Math.round(pos.x - 0.5), Math.round(pos.y), Math.round(pos.z - 0.5));
+    }
+
+    /** The ship's yaw rounded to the nearest multiple of 90 degrees. */
+    public static float snappedYaw(float yaw) {
+        return Math.round(yaw / 90.0F) * 90.0F;
+    }
+
     private static BlockPos findLandingAnchor(ServerLevel level, AirshipEntity ship, List<AirshipCell> cells) {
-        BlockPos base = BlockPos.containing(
-                Math.round(ship.getX() - 0.5), Math.round(ship.getY()), Math.round(ship.getZ() - 0.5));
+        BlockPos base = snappedAnchor(ship.position());
         for (int[] offset : LANDING_OFFSETS) {
             BlockPos anchor = base.offset(offset[0], offset[1], offset[2]);
             if (fits(level, cells, anchor)) {

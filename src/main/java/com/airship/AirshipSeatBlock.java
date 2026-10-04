@@ -1,6 +1,10 @@
 package com.airship;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
@@ -9,8 +13,8 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 /**
- * Seat block. Half a block high; the airship entity seats players on top of it.
- * It has no behaviour of its own: seats are discovered when an airship is assembled.
+ * Seat block. Half a block high. Right-click it to sit down: the connected structure turns into a
+ * flying airship (it needs a Core). Leaving the seat with Shift lands the ship again.
  */
 public class AirshipSeatBlock extends Block {
     /** Height of the seat surface in blocks (must match the shape below). */
@@ -19,6 +23,17 @@ public class AirshipSeatBlock extends Block {
 
     public AirshipSeatBlock(Properties properties) {
         super(properties);
+    }
+
+    @Override
+    protected InteractionResult useWithoutItem(
+            BlockState state,
+            Level level,
+            BlockPos pos,
+            Player player,
+            BlockHitResult hit
+    ) {
+        return AirshipAssembler.assemble(level, pos, player);
     }
 
     @Override

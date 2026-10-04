@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -43,6 +44,8 @@ public class AirshipEntity extends Entity {
     private final Map<BlockPos, BlockState> stateByPos = new HashMap<>();
     private final Map<BlockPos, Integer> engineFuel = new HashMap<>();
     private List<Vec3> seats = List.of();
+    private BlockPos primarySeat;
+    private int landCooldown;
     private BlockPos[] surface;
     private int[] surfaceMask;
     private List<AirshipClientCell> exposed;
@@ -91,24 +94,41 @@ public class AirshipEntity extends Entity {
             }
         }
 
-        List<Vec3> found = new ArrayList<>();
-        for (Map.Entry<BlockPos, BlockState> entry : stateByPos.entrySet()) {
-            if (entry.getValue().is(ModBlocks.AIRSHIP_SEAT)) {
-                BlockPos p = entry.getKey();
-                found.add(new Vec3(p.getX(), p.getY() + AirshipSeatBlock.SEAT_HEIGHT, p.getZ()));
-            }
-        }
-        // Seats closest to the Core come first.
-        found.sort(Comparator.comparingDouble(Vec3::lengthSqr)
-                .thenComparingDouble(v -> v.y)
-                .thenComparingDouble(v -> v.x)
-                .thenComparingDouble(v -> v.z));
-        this.seats = List.copyOf(found);
+        computeSeats();
 
         this.surface = null;
         this.surfaceMask = null;
         this.exposed = null;
         this.cellVersion++;
+    }
+
+    /** The seat the player who started the ship sits on (it becomes the first seat). */
+    public void setPrimarySeat(BlockPos relativeSeat) {
+        this.primarySeat = relativeSeat.immutable();
+        computeSeats();
+    }
+
+    private void computeSeats() {
+        List<BlockPos> seatCells = new ArrayList<>();
+        for (Map.Entry<BlockPos, BlockState> entry : stateByPos.entrySet()) {
+            if (entry.getValue().is(ModBlocks.AIRSHIP_SEAT)) {
+                seatCells.add(entry.getKey());
+            }
+        }
+        // The primary seat first, then the seats closest to the Core.
+        seatCells.sort(Comparator
+                .comparingInt((BlockPos p) -> p.equals(primarySeat) ? 0 : 1)
+                .thenComparingDouble(p -> (double) p.getX() * p.getX() + (double) p.getY() * p.getY()
+                        + (double) p.getZ() * p.getZ())
+                .thenComparingInt(BlockPos::getY)
+                .thenComparingInt(BlockPos::getX)
+                .thenComparingInt(BlockPos::getZ));
+
+        List<Vec3> found = new ArrayList<>();
+        for (BlockPos p : seatCells) {
+            found.add(new Vec3(p.getX(), p.getY() + AirshipSeatBlock.SEAT_HEIGHT, p.getZ()));
+        }
+        this.seats = List.copyOf(found);
     }
 
     public List<AirshipCell> getCells() {
@@ -224,12 +244,6 @@ public class AirshipEntity extends Entity {
         return false;
     }
 
-    /** Pickable so players can right-click the ship to board it or to land it. */
-    @Override
-    public boolean isPickable() {
-        return true;
-    }
-
     // ------------------------------------------------------------------ seats
 
     private Vec3 toWorldOffset(Vec3 local) {
@@ -255,15 +269,19 @@ public class AirshipEntity extends Entity {
         if (seats.isEmpty()) {
             return super.getDismountLocationForPassenger(passenger);
         }
-        // Put the player back on the seat they were sitting on.
-        Vec3 best = position().add(toWorldOffset(seats.get(0)));
+        // The ship lands as soon as the last passenger leaves, snapped to the block grid and to 90 degrees.
+        // Put the player on top of the seat block that will be placed there.
+        BlockPos anchor = AirshipAssembler.snappedAnchor(position());
+        Vec3 anchorPos = new Vec3(anchor.getX() + 0.5, anchor.getY(), anchor.getZ() + 0.5);
+        double snappedRad = -Math.toRadians(AirshipAssembler.snappedYaw(getYRot()));
+
+        Vec3 best = anchorPos.add(seats.get(0).yRot((float) snappedRad));
         double bestDistance = Double.MAX_VALUE;
         for (Vec3 seat : seats) {
-            Vec3 world = position().add(toWorldOffset(seat));
-            double distance = world.distanceToSqr(passenger.position());
+            double distance = position().add(toWorldOffset(seat)).distanceToSqr(passenger.position());
             if (distance < bestDistance) {
                 bestDistance = distance;
-                best = world;
+                best = anchorPos.add(seat.yRot((float) snappedRad));
             }
         }
         return best;
@@ -327,6 +345,24 @@ public class AirshipEntity extends Entity {
     private void serverTick(ServerLevel level) {
         if (cells.isEmpty()) {
             discard();
+            return;
+        }
+
+        // Nobody sits in the ship any more: it turns back into solid blocks.
+        if (getPassengers().isEmpty()) {
+            velocity = Vec3.ZERO;
+            if (landCooldown > 0) {
+                landCooldown--;
+            } else if (!AirshipAssembler.disassemble(level, this)) {
+                landCooldown = 20;
+                if (level.getGameTime() % 100 == 0) {
+                    for (ServerPlayer nearby : level.getEntitiesOfClass(
+                            ServerPlayer.class, getBoundingBox().inflate(32.0))) {
+                        nearby.sendSystemMessage(Component.literal(
+                                "Airship cannot land here: not enough free space"));
+                    }
+                }
+            }
             return;
         }
 
@@ -405,9 +441,9 @@ public class AirshipEntity extends Entity {
         double targetY = 0.0;
         boolean up = (flags & AirshipControlPayload.UP) != 0;
         boolean down = (flags & AirshipControlPayload.DOWN) != 0;
-        if (up && !down) {
-            targetY = VERTICAL_SPEED;
-        } else if (down && !up) {
+        if (up) {
+            targetY = VERTICAL_SPEED; // ascending always wins if both keys are held
+        } else if (down) {
             targetY = -VERTICAL_SPEED;
         }
 
@@ -420,6 +456,9 @@ public class AirshipEntity extends Entity {
         // --- move with collision ---
         if (velocity.lengthSqr() > 1.0E-10) {
             AirshipCollision.Result result = AirshipCollision.move(level, this, position(), velocity);
+            if (up && result.hitY() && velocity.y > 0.0 && pilot != null && level.getGameTime() % 40 == 0) {
+                pilot.sendSystemMessage(Component.literal("Airship is blocked above"));
+            }
             velocity = new Vec3(
                     result.hitX() ? 0.0 : velocity.x,
                     result.hitY() ? 0.0 : velocity.y,
