@@ -10,7 +10,10 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 
-/** The anchor of a ship. Right-click it (or a seat) to turn the connected structure into an airship. */
+/**
+ * The anchor of a ship. Right-click it to check the ship (blocks, balloons, seats, cushions).
+ * To fly, sit down on the Airship Seat.
+ */
 public class AirshipCoreBlock extends Block implements EntityBlock {
     public AirshipCoreBlock(Properties properties) {
         super(properties);
@@ -29,6 +32,6 @@ public class AirshipCoreBlock extends Block implements EntityBlock {
             Player player,
             BlockHitResult hit
     ) {
-        return AirshipAssembler.assemble(level, pos, player);
+        return AirshipAssembler.inspect(level, pos, player);
     }
 }

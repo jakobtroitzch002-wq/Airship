@@ -2,11 +2,15 @@ package com.airship;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
@@ -46,11 +50,20 @@ public final class AirshipAssembler {
 
     // ------------------------------------------------------------------ assemble
 
+    /** Right-click on the Core: check the ship and report, without taking off. */
+    public static InteractionResult inspect(Level level, BlockPos startPos, Player player) {
+        return run(level, startPos, player, false);
+    }
+
     /**
-     * Assembles the structure connected to {@code startPos} (a Core or a Seat) into a flying airship.
-     * The clicking player is seated; if the click was on a seat, that seat is theirs.
+     * Right-click on the Airship Seat (the control block): turn the connected structure into a flying
+     * airship. The clicking player becomes the pilot, cushion sitters stay on their cushions.
      */
     public static InteractionResult assemble(Level level, BlockPos startPos, Player player) {
+        return run(level, startPos, player, true);
+    }
+
+    private static InteractionResult run(Level level, BlockPos startPos, Player player, boolean launch) {
         if (!(level instanceof ServerLevel serverLevel)) {
             return InteractionResult.SUCCESS;
         }
@@ -82,12 +95,7 @@ public final class AirshipAssembler {
             return InteractionResult.SUCCESS;
         }
 
-        BlockPos primarySeat = level.getBlockState(startPos).is(ModBlocks.AIRSHIP_SEAT)
-                ? new BlockPos(startPos.getX() - corePos.getX(), startPos.getY() - corePos.getY(),
-                        startPos.getZ() - corePos.getZ())
-                : null;
-
-        // Cushions (entities attached to blocks) on the ship fly along and are seats, too.
+        // Cushions (entities attached to blocks) on the ship fly along as passenger seats.
         AABB area = boundsOf(blocks);
         List<Entity> cushionEntities = serverLevel.getEntitiesOfClass(
                 Entity.class, area, e -> AirshipCushions.isCushion(e) && isAttachedToShip(e, blocks));
@@ -95,48 +103,58 @@ public final class AirshipAssembler {
         int balloons = 0;
         int seatBlocks = 0;
         int engines = 0;
+        BlockPos controlSeat = null;
         for (BlockPos pos : blocks) {
             BlockState state = level.getBlockState(pos);
             if (state.is(ModBlocks.AIRSHIP_BALLOON)) {
                 balloons++;
             } else if (state.is(ModBlocks.AIRSHIP_SEAT)) {
                 seatBlocks++;
+                controlSeat = pos;
             } else if (state.is(ModBlocks.AIRSHIP_ENGINE)) {
                 engines++;
             }
         }
-        int seatCount = seatBlocks + cushionEntities.size();
+        int cushionCount = cushionEntities.size();
 
         int required = AirshipLift.requiredBalloons(blocks.size());
         tell(player, "Airship: " + blocks.size() + " blocks, " + balloons + "/" + required
-                + " balloons, " + seatCount + " seats (" + cushionEntities.size() + " cushions), "
-                + engines + " engines");
+                + " balloons, " + cushionCount + " cushions, " + engines + " engines");
 
+        if (seatBlocks == 0) {
+            tell(player, "Airship cannot fly: it needs an Airship Seat (the control block)");
+            return InteractionResult.SUCCESS;
+        }
+        if (seatBlocks > 1) {
+            tell(player, "Airship cannot fly: only one Airship Seat (control block) per ship, found " + seatBlocks);
+            return InteractionResult.SUCCESS;
+        }
         if (!AirshipLift.hasEnoughLift(balloons, required)) {
             tell(player, "Airship cannot fly: not enough balloons (1 per "
                     + AirshipLift.BLOCKS_PER_BALLOON + " blocks)");
             return InteractionResult.SUCCESS;
         }
-        if (seatCount == 0) {
-            tell(player, "Airship cannot fly: it needs at least one seat or cushion");
+        if (!launch) {
+            tell(player, "Airship is ready. Sit down on the Airship Seat to fly it.");
+            return InteractionResult.SUCCESS;
+        }
+        if (!(player instanceof ServerPlayer pilot)) {
             return InteractionResult.SUCCESS;
         }
 
-        // Possible seats, as positions relative to the Core: seat blocks first, then cushions.
+        // Seats relative to the Core: index 0 is the control seat, then the cushions (nearest first).
         double originX = corePos.getX() + 0.5;
         double originY = corePos.getY();
         double originZ = corePos.getZ() + 0.5;
         List<SeatSpot> spots = new ArrayList<>();
-        for (BlockPos pos : blocks) {
-            if (level.getBlockState(pos).is(ModBlocks.AIRSHIP_SEAT)) {
-                BlockPos relative = new BlockPos(
-                        pos.getX() - corePos.getX(), pos.getY() - corePos.getY(), pos.getZ() - corePos.getZ());
-                spots.add(new SeatSpot(
-                        new Vec3(relative.getX(), relative.getY() + AirshipSeatBlock.SEAT_HEIGHT, relative.getZ()),
-                        relative, null));
-            }
-        }
-        spots.sort(Comparator.comparingDouble((SeatSpot spot) -> spot.local().lengthSqr()));
+        BlockPos controlRelative = new BlockPos(
+                controlSeat.getX() - corePos.getX(),
+                controlSeat.getY() - corePos.getY(),
+                controlSeat.getZ() - corePos.getZ());
+        spots.add(new SeatSpot(
+                new Vec3(controlRelative.getX(), controlRelative.getY() + AirshipSeatBlock.SEAT_HEIGHT,
+                        controlRelative.getZ()),
+                controlRelative, null));
         List<SeatSpot> cushionSpots = new ArrayList<>();
         for (Entity cushion : cushionEntities) {
             cushionSpots.add(new SeatSpot(
@@ -148,11 +166,9 @@ public final class AirshipAssembler {
         cushionSpots.sort(Comparator.comparingDouble((SeatSpot spot) -> spot.local().lengthSqr()));
         spots.addAll(cushionSpots);
 
-        // Everybody who sits on a cushion or stands on the ship needs a seat, otherwise they would fall.
+        // The pilot, everybody sitting on a cushion and everybody standing on the ship come along.
         Set<ServerPlayer> riderSet = new LinkedHashSet<>();
-        if (player instanceof ServerPlayer starter) {
-            riderSet.add(starter);
-        }
+        riderSet.add(pilot);
         for (Entity cushion : cushionEntities) {
             for (Entity passenger : cushion.getPassengers()) {
                 if (passenger instanceof ServerPlayer sitting) {
@@ -164,48 +180,49 @@ public final class AirshipAssembler {
             riderSet.add(other);
         }
         List<ServerPlayer> riders = new ArrayList<>(riderSet);
-        if (riders.size() > seatCount) {
-            tell(player, "Not enough seats: " + riders.size() + " players on the airship, " + seatCount + " seats");
+        if (riders.size() > 1 + cushionCount) {
+            tell(player, "Not enough seats: " + riders.size() + " players on the airship, but only the Airship Seat"
+                    + " and " + cushionCount + " cushions. Everybody who is not the pilot needs a cushion.");
             return InteractionResult.SUCCESS;
         }
 
-        // Give every rider a seat: the clicked seat for the starter, their own cushion for cushion sitters,
-        // otherwise the nearest free one. Passenger n sits on seat n, so the seat order follows the riders.
-        List<SeatSpot> free = new ArrayList<>(spots);
-        List<Vec3> seatOrder = new ArrayList<>();
-        for (ServerPlayer rider : riders) {
-            SeatSpot chosen = null;
-            if (rider == player && primarySeat != null) {
-                for (SeatSpot spot : free) {
-                    if (primarySeat.equals(spot.blockPos())) {
-                        chosen = spot;
-                        break;
-                    }
+        // Fixed seat for everybody: the pilot on the control seat (0), cushion sitters on their own cushion,
+        // the others on the nearest free cushion.
+        int[] seatIndex = new int[riders.size()];
+        Set<Integer> taken = new HashSet<>();
+        seatIndex[0] = 0;
+        taken.add(0);
+        for (int i = 1; i < riders.size(); i++) {
+            seatIndex[i] = -1;
+            for (int s = 1; s < spots.size(); s++) {
+                if (!taken.contains(s) && spots.get(s).cushion() != null
+                        && riders.get(i).getVehicle() == spots.get(s).cushion()) {
+                    seatIndex[i] = s;
+                    taken.add(s);
+                    break;
                 }
             }
-            if (chosen == null) {
-                for (SeatSpot spot : free) {
-                    if (spot.cushion() != null && rider.getVehicle() == spot.cushion()) {
-                        chosen = spot;
-                        break;
-                    }
-                }
-            }
-            if (chosen == null) {
-                double best = Double.MAX_VALUE;
-                for (SeatSpot spot : free) {
-                    double distance = new Vec3(originX, originY, originZ).add(spot.local())
-                            .distanceToSqr(rider.position());
-                    if (distance < best) {
-                        best = distance;
-                        chosen = spot;
-                    }
-                }
-            }
-            free.remove(chosen);
-            seatOrder.add(chosen.local());
         }
-        for (SeatSpot spot : free) {
+        for (int i = 1; i < riders.size(); i++) {
+            if (seatIndex[i] >= 0) {
+                continue;
+            }
+            double best = Double.MAX_VALUE;
+            for (int s = 1; s < spots.size(); s++) {
+                if (taken.contains(s)) {
+                    continue;
+                }
+                double distance = new Vec3(originX, originY, originZ).add(spots.get(s).local())
+                        .distanceToSqr(riders.get(i).position());
+                if (distance < best) {
+                    best = distance;
+                    seatIndex[i] = s;
+                }
+            }
+            taken.add(seatIndex[i]);
+        }
+        List<Vec3> seatOrder = new ArrayList<>();
+        for (SeatSpot spot : spots) {
             seatOrder.add(spot.local());
         }
 
@@ -255,11 +272,18 @@ public final class AirshipAssembler {
         ship.setSeatOrder(seatOrder);
         serverLevel.addFreshEntity(ship);
 
-        for (ServerPlayer rider : riders) {
-            rider.startRiding(ship, true, true);
+        Map<Integer, Integer> assignment = new HashMap<>();
+        for (int i = 0; i < riders.size(); i++) {
+            riders.get(i).startRiding(ship, true, true);
+            assignment.put(riders.get(i).getId(), seatIndex[i]);
+        }
+        ship.setSeatAssignment(assignment);
+        AirshipSeatMapPayload seatMap = ship.seatMapPayload();
+        for (ServerPlayer tracking : PlayerLookup.tracking(ship)) {
+            ServerPlayNetworking.send(tracking, seatMap);
         }
 
-        tell(player, "Airship ready. W/A/S/D move, Space up, Ctrl down. Shift leaves the seat and lands the ship.");
+        tell(player, "You are the pilot. W/A/S/D move, Space up, C down. Shift leaves the seat and lands the ship.");
         return InteractionResult.SUCCESS;
     }
 

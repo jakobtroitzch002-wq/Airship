@@ -42,6 +42,18 @@ public final class AirshipClient implements ClientModInitializer {
             }
         });
 
+        // Which passenger sits on which seat.
+        ClientPlayNetworking.registerGlobalReceiver(AirshipSeatMapPayload.TYPE, (payload, context) -> {
+            Minecraft client = Minecraft.getInstance();
+            if (client.level != null && client.level.getEntity(payload.entityId()) instanceof AirshipEntity ship) {
+                java.util.Map<Integer, Integer> assignment = new java.util.HashMap<>();
+                for (int i = 0; i < payload.passengerIds().size() && i < payload.seatIndices().size(); i++) {
+                    assignment.put(payload.passengerIds().get(i), payload.seatIndices().get(i));
+                }
+                ship.setSeatAssignment(assignment);
+            }
+        });
+
         // Block data of a ship: apply it now if the entity exists, otherwise park it until it does.
         ClientPlayNetworking.registerGlobalReceiver(AirshipBlocksPayload.TYPE, (payload, context) -> {
             Minecraft client = Minecraft.getInstance();

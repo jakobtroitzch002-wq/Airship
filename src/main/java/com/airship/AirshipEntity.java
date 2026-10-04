@@ -57,8 +57,9 @@ public class AirshipEntity extends Entity {
 
     // server only
     private Vec3 velocity = Vec3.ZERO;
-    private ServerPlayer lastPilot;
-    private float yawOffset;
+    // seat assignment: passenger entity id -> seat index (0 = control seat); and the ship's "front"
+    private final Map<Integer, Integer> seatByPassenger = new HashMap<>();
+    private float controlYaw;
 
     // client only: buffered snapshots from the server, played back a little behind real time
     private record Snapshot(long tick, Vec3 pos, float yaw) {}
@@ -112,6 +113,14 @@ public class AirshipEntity extends Entity {
             }
         }
 
+        // The Airship Seat faces the front of the ship.
+        this.controlYaw = 0.0F;
+        for (BlockState state : stateByPos.values()) {
+            if (state.is(ModBlocks.AIRSHIP_SEAT)) {
+                this.controlYaw = state.getValue(AirshipSeatBlock.FACING).toYRot();
+                break;
+            }
+        }
         computeSeats();
 
         this.surface = null;
@@ -136,6 +145,21 @@ public class AirshipEntity extends Entity {
     /** Sets the order of the seats: the n-th passenger sits on the n-th seat. */
     public void setSeatOrder(List<Vec3> order) {
         this.seats = List.copyOf(order);
+    }
+
+    /** Fixed seat for each passenger (passenger entity id -> seat index). */
+    public void setSeatAssignment(Map<Integer, Integer> assignment) {
+        seatByPassenger.clear();
+        seatByPassenger.putAll(assignment);
+    }
+
+    public AirshipSeatMapPayload seatMapPayload() {
+        List<Integer> ids = new ArrayList<>(seatByPassenger.keySet());
+        List<Integer> indices = new ArrayList<>();
+        for (int id : ids) {
+            indices.add(seatByPassenger.get(id));
+        }
+        return new AirshipSeatMapPayload(getId(), ids, indices);
     }
 
     public List<Vec3> getSeats() {
@@ -342,7 +366,8 @@ public class AirshipEntity extends Entity {
         if (seats.isEmpty()) {
             return Vec3.ZERO;
         }
-        int index = Math.max(0, getPassengers().indexOf(passenger));
+        Integer assigned = seatByPassenger.get(passenger.getId());
+        int index = assigned != null ? assigned : Math.max(0, getPassengers().indexOf(passenger));
         return toWorldOffset(seats.get(index % seats.size()));
     }
 
@@ -357,6 +382,10 @@ public class AirshipEntity extends Entity {
         Vec3 anchorPos = new Vec3(anchor.getX() + 0.5, anchor.getY(), anchor.getZ() + 0.5);
         double snappedRad = -Math.toRadians(AirshipAssembler.snappedYaw(getYRot()));
 
+        Integer assigned = seatByPassenger.get(passenger.getId());
+        if (assigned != null && assigned >= 0 && assigned < seats.size()) {
+            return anchorPos.add(seats.get(assigned).yRot((float) snappedRad));
+        }
         Vec3 best = anchorPos.add(seats.get(0).yRot((float) snappedRad));
         double bestDistance = Double.MAX_VALUE;
         for (Vec3 seat : seats) {
@@ -513,14 +542,32 @@ public class AirshipEntity extends Entity {
         }
     }
 
+    /** The pilot is whoever sits on the control seat (seat 0). Cushion sitters are only passengers. */
+    private ServerPlayer findPilot() {
+        List<Entity> passengers = getPassengers();
+        for (int i = 0; i < passengers.size(); i++) {
+            if (!(passengers.get(i) instanceof ServerPlayer player)) {
+                continue;
+            }
+            Integer seat = seatByPassenger.get(player.getId());
+            // Without a seat assignment (e.g. after loading the world) the first passenger is the pilot.
+            if (seat != null ? seat == 0 : (seatByPassenger.isEmpty() && i == 0)) {
+                return player;
+            }
+        }
+        return null;
+    }
+
     private void serverTick(ServerLevel level) {
         if (cells.isEmpty()) {
             discard();
             return;
         }
 
-        // Nobody sits in the ship any more: it turns back into solid blocks.
-        if (getPassengers().isEmpty()) {
+        // Without a pilot on the control seat the ship turns back into solid blocks
+        // (passengers on cushions are put down on their cushions).
+        ServerPlayer pilot = findPilot();
+        if (pilot == null) {
             velocity = Vec3.ZERO;
             if (landCooldown > 0) {
                 landCooldown--;
@@ -537,37 +584,27 @@ public class AirshipEntity extends Entity {
             return;
         }
 
-        Entity first = getFirstPassenger();
-        ServerPlayer pilot = first instanceof ServerPlayer sp ? sp : null;
-        int flags = pilot == null ? 0 : AirshipControls.flags(pilot, level.getGameTime());
+        int flags = AirshipControls.flags(pilot, level.getGameTime());
 
-        // --- turn towards where the pilot looks (relative to how they were facing when they sat down) ---
-        if (pilot != lastPilot) {
-            lastPilot = pilot;
-            if (pilot != null) {
-                yawOffset = Mth.wrapDegrees(getYRot() - pilot.getYRot());
-            }
-        }
-        if (pilot != null) {
-            float target = pilot.getYRot() + yawOffset;
-            float diff = Mth.wrapDegrees(target - getYRot());
-            float step = Mth.clamp(diff, -MAX_TURN, MAX_TURN);
-            if (Math.abs(step) > 1.0E-3F) {
-                float newYaw = Mth.wrapDegrees(getYRot() + step);
-                // Turn around the pilot's seat, not the Core: otherwise the pilot's camera swings around
-                // the Core on a circle every time the ship turns, which looks like violent shaking.
-                Vec3 pivot = getPivot();
-                Vec3 shift = rotateLocal(pivot, getYRot()).subtract(rotateLocal(pivot, newYaw));
-                Vec3 newPos = position().add(shift);
-                if (!AirshipCollision.collides(level, this, newPos, newYaw)) {
-                    setPos(newPos.x, newPos.y, newPos.z);
-                    setYRot(newYaw);
-                }
+        // --- turn so that the front of the ship (the way the Airship Seat faces) points where the pilot looks ---
+        float target = pilot.getYRot() - controlYaw;
+        float diff = Mth.wrapDegrees(target - getYRot());
+        float step = Mth.clamp(diff, -MAX_TURN, MAX_TURN);
+        if (Math.abs(step) > 1.0E-3F) {
+            float newYaw = Mth.wrapDegrees(getYRot() + step);
+            // Turn around the pilot's seat, not the Core: otherwise the pilot's camera swings around
+            // the Core on a circle every time the ship turns, which looks like violent shaking.
+            Vec3 pivot = getPivot();
+            Vec3 shift = rotateLocal(pivot, getYRot()).subtract(rotateLocal(pivot, newYaw));
+            Vec3 newPos = position().add(shift);
+            if (!AirshipCollision.collides(level, this, newPos, newYaw)) {
+                setPos(newPos.x, newPos.y, newPos.z);
+                setYRot(newYaw);
             }
         }
 
         // --- horizontal input, relative to the pilot's look direction ---
-        float lookYaw = pilot == null ? 0.0F : pilot.getYRot();
+        float lookYaw = pilot.getYRot();
         double yawRad = Math.toRadians(lookYaw);
         double forwardX = -Math.sin(yawRad);
         double forwardZ = Math.cos(yawRad);
