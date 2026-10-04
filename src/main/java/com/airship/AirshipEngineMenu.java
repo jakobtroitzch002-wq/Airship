@@ -11,20 +11,27 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * The engine's screen: one fuel slot plus the player's inventory. Fuel put into the slot is turned into
- * running time right away (each fuel gives its own time, as long as the tank has room); whatever is left
- * goes back to the player.
+ * The engine's screen: two fuel slots plus the player's inventory.
+ * <ul>
+ *   <li>Slot 0 feeds the normal tank.</li>
+ *   <li>Slot 1 feeds the turbo tank: it burns {@link AirshipEntity#TURBO_BURN_RATE} times as fast while the pilot
+ *       holds the boost key, and makes the ship much faster.</li>
+ * </ul>
+ * Fuel put into a slot is turned into running time right away (each fuel gives its own time, as long as the tank
+ * has room); whatever is left goes back to the player.
  */
 public class AirshipEngineMenu extends AbstractContainerMenu {
     private static final int PLAYER_SLOTS = 36;
+    private static final int FUEL_SLOTS = 2;
 
     private final AirshipEngineBlockEntity engine; // null on the client
     private final ContainerData data;
     private final SimpleContainer fuelContainer;
+    private final SimpleContainer turboContainer;
 
     /** Client side. */
     public AirshipEngineMenu(int containerId, Inventory inventory) {
-        this(containerId, inventory, null, new SimpleContainerData(1));
+        this(containerId, inventory, null, new SimpleContainerData(2));
     }
 
     /** Server side. */
@@ -39,8 +46,21 @@ public class AirshipEngineMenu extends AbstractContainerMenu {
                 AirshipEngineMenu.this.slotsChanged(this);
             }
         };
+        this.turboContainer = new SimpleContainer(1) {
+            @Override
+            public void setChanged() {
+                super.setChanged();
+                AirshipEngineMenu.this.slotsChanged(this);
+            }
+        };
 
         addSlot(new Slot(fuelContainer, 0, AirshipEngineLayout.FUEL_X + 1, AirshipEngineLayout.FUEL_Y + 1) {
+            @Override
+            public boolean mayPlace(ItemStack stack) {
+                return isFuel(stack);
+            }
+        });
+        addSlot(new Slot(turboContainer, 0, AirshipEngineLayout.TURBO_X + 1, AirshipEngineLayout.TURBO_Y + 1) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return isFuel(stack);
@@ -65,35 +85,47 @@ public class AirshipEngineMenu extends AbstractContainerMenu {
         return AirshipFuel.isFuel(stack);
     }
 
-    /** Remaining fuel of the engine, in ticks of thrust. */
+    /** Remaining fuel of the normal tank, in ticks of thrust. */
     public int getFuel() {
         return data.get(0);
+    }
+
+    /** Remaining fuel of the turbo tank (it burns {@link AirshipEntity#TURBO_BURN_RATE} times as fast). */
+    public int getTurbo() {
+        return data.get(1);
     }
 
     @Override
     public void slotsChanged(Container container) {
         super.slotsChanged(container);
         if (container == fuelContainer) {
-            absorbFuel();
+            absorbFuel(fuelContainer, false);
+        } else if (container == turboContainer) {
+            absorbFuel(turboContainer, true);
         }
     }
 
-    private void absorbFuel() {
+    private void absorbFuel(SimpleContainer container, boolean turbo) {
         if (engine == null) {
             return;
         }
-        ItemStack stack = fuelContainer.getItem(0);
+        ItemStack stack = container.getItem(0);
         // Burn items one by one as long as they fit into the tank; the rest stays in the slot.
         while (!stack.isEmpty()) {
             int burn = AirshipFuel.burnTime(stack);
-            if (burn <= 0 || engine.getFuel() + burn > AirshipEngineBlockEntity.MAX_FUEL) {
+            int current = turbo ? engine.getTurbo() : engine.getFuel();
+            if (burn <= 0 || current + burn > AirshipEngineBlockEntity.MAX_FUEL) {
                 break;
             }
             ItemStack remainder = AirshipFuel.remainder(stack);
-            engine.addFuel(burn);
+            if (turbo) {
+                engine.addTurbo(burn);
+            } else {
+                engine.addFuel(burn);
+            }
             stack.shrink(1);
             if (stack.isEmpty() && !remainder.isEmpty()) {
-                fuelContainer.setItem(0, remainder); // e.g. the empty bucket after lava
+                container.setItem(0, remainder); // e.g. the empty bucket after lava
                 break;
             }
         }
@@ -106,12 +138,13 @@ public class AirshipEngineMenu extends AbstractContainerMenu {
         if (slot != null && slot.hasItem()) {
             ItemStack stack = slot.getItem();
             copy = stack.copy();
-            if (index == 0) {
-                if (!moveItemStackTo(stack, 1, 1 + PLAYER_SLOTS, true)) {
+            if (index < FUEL_SLOTS) {
+                if (!moveItemStackTo(stack, FUEL_SLOTS, FUEL_SLOTS + PLAYER_SLOTS, true)) {
                     return ItemStack.EMPTY;
                 }
             } else if (isFuel(stack)) {
-                if (!moveItemStackTo(stack, 0, 1, false)) {
+                // Shift-click fills the normal tank first, then the turbo tank.
+                if (!moveItemStackTo(stack, 0, FUEL_SLOTS, false)) {
                     return ItemStack.EMPTY;
                 }
             } else {
@@ -141,6 +174,7 @@ public class AirshipEngineMenu extends AbstractContainerMenu {
         super.removed(player);
         if (!player.level().isClientSide()) {
             clearContainer(player, fuelContainer);
+            clearContainer(player, turboContainer);
         }
     }
 }

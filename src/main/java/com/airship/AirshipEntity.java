@@ -36,6 +36,11 @@ public class AirshipEntity extends Entity {
     public static final double BASE_SPEED = 0.10;
     public static final double ENGINE_BOOST = 0.22;
     public static final double ENGINE_FALLOFF = 0.70;
+    /** The turbo tank burns this many times as fast as the normal one ... */
+    public static final int TURBO_BURN_RATE = 5;
+    /** ... and, while it burns, multiplies the top speed and the acceleration. */
+    public static final double TURBO_SPEED_MULTIPLIER = 2.5;
+    public static final double TURBO_ACCEL_MULTIPLIER = 3.0;
     private static final double VERTICAL_SPEED = 0.08;
     private static final double HORIZONTAL_ACCEL = 0.012;
     private static final double VERTICAL_ACCEL = 0.02;
@@ -45,6 +50,7 @@ public class AirshipEntity extends Entity {
     private List<AirshipCell> cells = List.of();
     private final Map<BlockPos, BlockState> stateByPos = new HashMap<>();
     private final Map<BlockPos, Integer> engineFuel = new HashMap<>();
+    private final Map<BlockPos, Integer> turboFuel = new HashMap<>();
     private List<Vec3> seats = List.of();
     private List<AirshipCushion> cushions = List.of();
     private List<AirshipClientCushion> clientCushions = List.of();
@@ -97,7 +103,7 @@ public class AirshipEntity extends Entity {
     public void setClientCells(List<AirshipClientCell> clientCells) {
         List<AirshipCell> converted = new ArrayList<>(clientCells.size());
         for (AirshipClientCell cell : clientCells) {
-            converted.add(new AirshipCell(cell.pos(), cell.state(), Optional.empty(), 0));
+            converted.add(new AirshipCell(cell.pos(), cell.state(), Optional.empty(), 0, 0));
         }
         setCells(converted);
     }
@@ -105,11 +111,13 @@ public class AirshipEntity extends Entity {
     private void rebuild() {
         stateByPos.clear();
         engineFuel.clear();
+        turboFuel.clear();
         for (AirshipCell cell : cells) {
             BlockPos pos = cell.pos().immutable();
             stateByPos.put(pos, cell.state());
             if (cell.state().is(ModBlocks.AIRSHIP_ENGINE)) {
                 engineFuel.put(pos, cell.fuel());
+                turboFuel.put(pos, cell.turbo());
             }
         }
 
@@ -231,7 +239,8 @@ public class AirshipEntity extends Entity {
         for (AirshipCell cell : cells) {
             result.add(new AirshipCell(
                     cell.pos(), cell.state(), cell.blockEntity(),
-                    engineFuel.getOrDefault(cell.pos(), 0)));
+                    engineFuel.getOrDefault(cell.pos(), 0),
+                    turboFuel.getOrDefault(cell.pos(), 0)));
         }
         return result;
     }
@@ -632,17 +641,30 @@ public class AirshipEntity extends Entity {
         double length = Math.hypot(inputX, inputZ);
         boolean thrusting = length > 1.0E-4;
 
-        // --- engines: each fuelled engine makes the ship faster and burns fuel while thrusting ---
-        int activeEngines = 0;
-        for (int fuel : engineFuel.values()) {
-            if (fuel > 0) {
-                activeEngines++;
+        // --- engines: each fuelled engine makes the ship faster and burns fuel while thrusting.
+        // While the boost key is held, an engine with turbo fuel burns that instead (5x as fast) for a big
+        // speed boost; engines without turbo fuel keep using their normal tank. ---
+        boolean wantBoost = thrusting && (flags & AirshipControlPayload.BOOST) != 0;
+        int normalActive = 0;
+        int turboActive = 0;
+        for (Map.Entry<BlockPos, Integer> entry : engineFuel.entrySet()) {
+            if (wantBoost && turboFuel.getOrDefault(entry.getKey(), 0) > 0) {
+                turboActive++;
+            } else if (entry.getValue() > 0) {
+                normalActive++;
             }
         }
-        double maxSpeed = BASE_SPEED + ENGINE_BOOST * (1.0 - Math.pow(ENGINE_FALLOFF, activeEngines));
-        if (thrusting && activeEngines > 0) {
+        int activeEngines = normalActive + turboActive;
+        double turboShare = engineFuel.isEmpty() ? 0.0 : (double) turboActive / engineFuel.size();
+        double maxSpeed = (BASE_SPEED + ENGINE_BOOST * (1.0 - Math.pow(ENGINE_FALLOFF, activeEngines)))
+                * (1.0 + (TURBO_SPEED_MULTIPLIER - 1.0) * turboShare);
+        double accel = HORIZONTAL_ACCEL * (1.0 + (TURBO_ACCEL_MULTIPLIER - 1.0) * turboShare);
+        if (thrusting) {
             for (Map.Entry<BlockPos, Integer> entry : engineFuel.entrySet()) {
-                if (entry.getValue() > 0) {
+                int turbo = turboFuel.getOrDefault(entry.getKey(), 0);
+                if (wantBoost && turbo > 0) {
+                    turboFuel.put(entry.getKey(), Math.max(0, turbo - TURBO_BURN_RATE));
+                } else if (entry.getValue() > 0) {
                     entry.setValue(entry.getValue() - 1);
                 }
             }
@@ -662,9 +684,9 @@ public class AirshipEntity extends Entity {
         }
 
         velocity = new Vec3(
-                approach(velocity.x, targetX, HORIZONTAL_ACCEL),
+                approach(velocity.x, targetX, accel),
                 approach(velocity.y, targetY, VERTICAL_ACCEL),
-                approach(velocity.z, targetZ, HORIZONTAL_ACCEL)
+                approach(velocity.z, targetZ, accel)
         );
 
         // --- move with collision ---
@@ -678,6 +700,21 @@ public class AirshipEntity extends Entity {
         }
         setDeltaMovement(velocity);
         broadcastState(level);
+
+        // Flight display for the pilot (a few times per second is plenty).
+        if (level.getGameTime() % 5 == 0) {
+            int fuelMax = 0;
+            int turboMax = 0;
+            for (int value : engineFuel.values()) {
+                fuelMax = Math.max(fuelMax, value);
+            }
+            for (int value : turboFuel.values()) {
+                turboMax = Math.max(turboMax, value);
+            }
+            ServerPlayNetworking.send(pilot, new AirshipHudPayload(
+                    fuelMax, turboMax, engineFuel.size(), activeEngines,
+                    (float) (velocity.length() * 20.0), turboActive > 0));
+        }
     }
 
     private static double approach(double current, double target, double step) {

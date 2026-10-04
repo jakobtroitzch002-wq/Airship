@@ -46,6 +46,19 @@ pilot is thrusting, so it stays put while the ship hovers or is landed. The tank
 | Stick | 0:05 |
 | Bamboo | 0:02 |
 
+### Turbo
+
+The engine screen has a second fuel field, the **turbo tank**. Fuel goes in the same way and gives the same time
+per item, but the turbo tank burns **5 times as fast** (a coal lasts 0:16 instead of 1:20). While the pilot holds
+the boost key (`B`, rebindable, "Airship: turbo (hold)") and thrusts, every engine that has turbo fuel burns it
+instead of its normal fuel and the ship gets much faster: top speed x2.5, acceleration x3 (scaled by how many
+engines have turbo fuel). Engines without turbo fuel keep using their normal tank.
+
+### Flight display
+
+While you pilot a ship, a small display above the hotbar shows your speed (blocks per second), how many engines are
+pushing, the fuel left in the fullest engine, and, if there is any, the turbo fuel left (as turbo time).
+
 Every fuelled engine makes the ship faster (with diminishing returns). Without fuel the ship still flies at its
 base speed. Items that do not fit into the tank anymore stay in the slot and go back to you when you close the screen.
 

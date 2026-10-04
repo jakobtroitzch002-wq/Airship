@@ -24,7 +24,8 @@ public record AirshipControlPayload(int flags) implements CustomPacketPayload {
     public static final int RIGHT = 8;
     public static final int UP = 16;
     public static final int DOWN = 32;
-    public static final int ALL = FORWARD | BACKWARD | LEFT | RIGHT | UP | DOWN;
+    public static final int BOOST = 64;
+    public static final int ALL = FORWARD | BACKWARD | LEFT | RIGHT | UP | DOWN | BOOST;
 
     @Override
     public Type<? extends CustomPacketPayload> type() {

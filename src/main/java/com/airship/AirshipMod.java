@@ -38,6 +38,10 @@ public final class AirshipMod implements ModInitializer {
                 AirshipSeatMapPayload.CODEC
         );
         PayloadTypeRegistry.clientboundPlay().register(
+                AirshipHudPayload.TYPE,
+                AirshipHudPayload.CODEC
+        );
+        PayloadTypeRegistry.clientboundPlay().register(
                 AirshipCoreInfoPayload.TYPE,
                 AirshipCoreInfoPayload.CODEC
         );

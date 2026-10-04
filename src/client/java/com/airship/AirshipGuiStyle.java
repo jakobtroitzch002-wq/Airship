@@ -18,6 +18,7 @@ final class AirshipGuiStyle {
     static final int OK = 0xFF2E7D5B;
     static final int BAD = 0xFFB5472F;
     static final int BAR = 0xFF2F7F72;
+    static final int TURBO = 0xFFB5472F;
     static final int WHITE = 0xFFFFFFFF;
 
     private AirshipGuiStyle() {}

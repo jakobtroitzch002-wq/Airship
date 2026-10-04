@@ -18,12 +18,13 @@ public class AirshipEngineBlockEntity extends BlockEntity implements MenuProvide
     public static final int MAX_FUEL = 24000;
 
     private int fuel;
+    private int turbo;
 
     /** Lets the menu read the fuel; the menu never writes it through this. */
     private final ContainerData fuelData = new ContainerData() {
         @Override
         public int get(int index) {
-            return fuel;
+            return index == 0 ? fuel : turbo;
         }
 
         @Override
@@ -32,7 +33,7 @@ public class AirshipEngineBlockEntity extends BlockEntity implements MenuProvide
 
         @Override
         public int getCount() {
-            return 1;
+            return 2;
         }
     };
 
@@ -53,6 +54,20 @@ public class AirshipEngineBlockEntity extends BlockEntity implements MenuProvide
         setFuel(fuel + ticks);
     }
 
+    /** Turbo tank: burns {@link AirshipEntity#TURBO_BURN_RATE} times faster and makes the ship much faster. */
+    public int getTurbo() {
+        return turbo;
+    }
+
+    public void setTurbo(int turbo) {
+        this.turbo = Math.max(0, Math.min(MAX_FUEL, turbo));
+        setChanged();
+    }
+
+    public void addTurbo(int ticks) {
+        setTurbo(turbo + ticks);
+    }
+
     @Override
     public Component getDisplayName() {
         return Component.literal("Luftschiff-Antrieb");
@@ -67,11 +82,13 @@ public class AirshipEngineBlockEntity extends BlockEntity implements MenuProvide
     protected void saveAdditional(ValueOutput output) {
         super.saveAdditional(output);
         output.putInt("fuel", fuel);
+        output.putInt("turbo", turbo);
     }
 
     @Override
     protected void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
         fuel = input.getIntOr("fuel", 0);
+        turbo = input.getIntOr("turbo", 0);
     }
 }

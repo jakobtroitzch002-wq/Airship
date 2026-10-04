@@ -5,6 +5,7 @@
   "block.airship.airship_seat": "Airship Seat",
   "block.airship.airship_build": "Airship Build Block",
   "key.airship.glass_mode": "Airship: toggle glass mode",
+  "key.airship.boost": "Airship: turbo (hold)",
   "key.airship.descend": "Airship: descend",
   "entity.airship.airship": "Airship"
 }

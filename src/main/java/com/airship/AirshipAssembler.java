@@ -289,10 +289,12 @@ public final class AirshipAssembler {
             BlockState state = level.getBlockState(pos);
             Optional<CompoundTag> blockEntityTag = Optional.empty();
             int fuel = 0;
+            int turbo = 0;
 
             BlockEntity blockEntity = level.getBlockEntity(pos);
             if (blockEntity instanceof AirshipEngineBlockEntity engine) {
                 fuel = engine.getFuel();
+                turbo = engine.getTurbo();
             } else if (blockEntity != null) {
                 blockEntityTag = Optional.of(blockEntity.saveWithFullMetadata(level.registryAccess()));
                 if (blockEntity instanceof Clearable clearable) {
@@ -304,7 +306,7 @@ public final class AirshipAssembler {
                     pos.getX() - corePos.getX(),
                     pos.getY() - corePos.getY(),
                     pos.getZ() - corePos.getZ());
-            cells.add(new AirshipCell(relative, state, blockEntityTag, fuel));
+            cells.add(new AirshipCell(relative, state, blockEntityTag, fuel, turbo));
         }
         for (BlockPos pos : blocks) {
             level.setBlock(pos, Blocks.AIR.defaultBlockState(), WRITE_FLAGS);
@@ -358,6 +360,7 @@ public final class AirshipAssembler {
             }
             if (blockEntity instanceof AirshipEngineBlockEntity engine) {
                 engine.setFuel(cell.fuel());
+                engine.setTurbo(cell.turbo());
             } else if (cell.blockEntity().isPresent()) {
                 CompoundTag tag = cell.blockEntity().get();
                 blockEntity.loadWithComponents(
@@ -465,7 +468,8 @@ public final class AirshipAssembler {
                     new BlockPos(x, cell.pos().getY(), z),
                     cell.state().rotate(rotation),
                     cell.blockEntity(),
-                    cell.fuel()));
+                    cell.fuel(),
+                    cell.turbo()));
         }
         return result;
     }

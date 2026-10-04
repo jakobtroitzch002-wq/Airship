@@ -39,11 +39,10 @@ public class AirshipEngineScreen extends AbstractContainerScreen<AirshipEngineMe
                 x + 23, y + 9, AirshipGuiStyle.TEXT, false);
         g.text(font, "Brennt nur bei Schub", x + 10, y + 22, AirshipGuiStyle.MUTED, false);
 
-        // Fuel slot, arrow
+        // Normal tank: slot, arrow and the big timer (it only counts down while the ship thrusts)
         AirshipGuiStyle.slot(g, x + AirshipEngineLayout.FUEL_X, y + AirshipEngineLayout.FUEL_Y);
-        AirshipGuiStyle.arrow(g, x + 32, y + 47, AirshipGuiStyle.MUTED);
+        AirshipGuiStyle.arrow(g, x + 32, y + 43, AirshipGuiStyle.MUTED);
 
-        // Timer: how long the engine still runs (it only burns while the ship thrusts)
         int fuel = menu.getFuel();
         int left = x + 48;
         int right = x + imageWidth - 10;
@@ -53,24 +52,40 @@ public class AirshipEngineScreen extends AbstractContainerScreen<AirshipEngineMe
 
         String timer = AirshipFuel.time(fuel);
         g.pose().pushMatrix();
-        g.pose().translate((float) left, (float) (y + 43));
+        g.pose().translate((float) left, (float) (y + 42));
         g.pose().scale(2.0F);
         g.text(font, Component.literal(timer).withStyle(ChatFormatting.BOLD), 0, 0,
                 fuel > 0 ? AirshipGuiStyle.TEXT : AirshipGuiStyle.MUTED, false);
         g.pose().popMatrix();
-        g.text(font, "Min", left + font.width(timer) * 2 + 4, y + 52, AirshipGuiStyle.MUTED, false);
+        g.text(font, "Min", left + font.width(timer) * 2 + 4, y + 51, AirshipGuiStyle.MUTED, false);
 
-        AirshipGuiStyle.bar(g, left, y + 64, right - left, 7,
+        AirshipGuiStyle.bar(g, left, y + 62, right - left, 7,
                 (float) fuel / AirshipEngineBlockEntity.MAX_FUEL, AirshipGuiStyle.FLAME);
+
+        // Turbo tank: burns 5x as fast, makes the ship much faster while the boost key is held
+        AirshipGuiStyle.slot(g, x + AirshipEngineLayout.TURBO_X, y + AirshipEngineLayout.TURBO_Y);
+        AirshipGuiStyle.arrow(g, x + 32, y + 85, AirshipGuiStyle.MUTED);
+
+        int turbo = menu.getTurbo();
+        g.text(font, Component.literal("Turbo").withStyle(ChatFormatting.BOLD), left, y + 76,
+                AirshipGuiStyle.TURBO, false);
+        String burn = AirshipEntity.TURBO_BURN_RATE + "x Verbrauch";
+        g.text(font, burn, right - font.width(burn), y + 76, AirshipGuiStyle.MUTED, false);
+        // The turbo tank holds as much as the normal one but runs out TURBO_BURN_RATE times sooner.
+        String turboTime = AirshipFuel.time(turbo / AirshipEntity.TURBO_BURN_RATE);
+        g.text(font, Component.literal(turboTime + " Min Turbo").withStyle(ChatFormatting.BOLD), left, y + 86,
+                turbo > 0 ? AirshipGuiStyle.TEXT : AirshipGuiStyle.MUTED, false);
+        AirshipGuiStyle.bar(g, left, y + 97, right - left, 7,
+                (float) turbo / AirshipEngineBlockEntity.MAX_FUEL, AirshipGuiStyle.TURBO);
 
         // Stat tiles
         int bonus = (int) Math.round(AirshipEntity.ENGINE_BOOST * (1.0 - AirshipEntity.ENGINE_FALLOFF)
                 / AirshipEntity.BASE_SPEED * 100.0);
-        tile(g, x + 10, y + 78, 88, "Tempo-Bonus", "+" + bonus + " %");
-        tile(g, x + 106, y + 78, 88, "Pro Kohle", "+" + AirshipFuel.time(1600) + " Min");
+        tile(g, x + 10, y + 110, 88, "Tempo-Bonus", "+" + bonus + " %");
+        tile(g, x + 106, y + 110, 88, "Turbo-Tempo", "x" + String.format("%.1f", AirshipEntity.TURBO_SPEED_MULTIPLIER));
 
         // Inventory
-        g.text(font, "Inventar", x + 10, y + 113, AirshipGuiStyle.TEXT, false);
+        g.text(font, "Inventar", x + 10, y + 142, AirshipGuiStyle.TEXT, false);
         for (int row = 0; row < 3; row++) {
             for (int column = 0; column < 9; column++) {
                 AirshipGuiStyle.slot(g, x + AirshipEngineLayout.INV_X + column * 18,

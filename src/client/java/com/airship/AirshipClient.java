@@ -37,6 +37,15 @@ public final class AirshipClient implements ClientModInitializer {
             )
     );
 
+    /** Hold while thrusting to burn the turbo tank of the engines (5x fuel, much faster). */
+    static final KeyMapping BOOST = KeyMappingHelper.registerKeyMapping(
+            new KeyMapping(
+                    "key.airship.boost",
+                    InputConstants.KEY_B,
+                    KeyMapping.Category.MISC
+            )
+    );
+
     private static int lastSentFlags = -1;
     private static int tickCounter;
 
@@ -45,6 +54,7 @@ public final class AirshipClient implements ClientModInitializer {
         BlockEntityRenderers.register(ModBlockEntities.AIRSHIP_BUILD, AirshipBuildBlockRenderer::new);
         EntityRendererRegistry.register(ModEntities.AIRSHIP, AirshipEntityRenderer::new);
         AirshipGlassFeature.register();
+        AirshipHud.register();
 
         // Engine screen (a container menu) and Core screen (opened by the server's check result).
         MenuScreens.register(ModMenus.ENGINE, AirshipEngineScreen::new);
@@ -64,6 +74,9 @@ public final class AirshipClient implements ClientModInitializer {
                 ship.receiveSnapshot(payload);
             }
         });
+
+        // Numbers for the flight display above the hotbar (sent to the pilot).
+        ClientPlayNetworking.registerGlobalReceiver(AirshipHudPayload.TYPE, (payload, context) -> AirshipHud.update(payload));
 
         // Which passenger sits on which seat.
         ClientPlayNetworking.registerGlobalReceiver(AirshipSeatMapPayload.TYPE, (payload, context) -> {
@@ -120,6 +133,7 @@ public final class AirshipClient implements ClientModInitializer {
                 if (options.keyRight.isDown()) flags |= AirshipControlPayload.RIGHT;
                 if (options.keyJump.isDown()) flags |= AirshipControlPayload.UP;
                 if (DESCEND.isDown()) flags |= AirshipControlPayload.DOWN;
+                if (BOOST.isDown()) flags |= AirshipControlPayload.BOOST;
             }
 
             tickCounter++;
