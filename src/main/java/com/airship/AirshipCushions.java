@@ -49,15 +49,22 @@ public final class AirshipCushions {
         return "white";
     }
 
-    /** A wool slab of the cushion's colour, used to draw the cushion while the ship is in the air. */
+    /**
+     * A wool slab of the cushion's colour, used to draw the cushion while the ship is in the air.
+     * If that exact slab is not found, any wool slab is used, and as a last resort nothing is drawn.
+     */
     public static BlockState standInState(String color) {
         String wanted = color + "_wool_slab";
+        BlockState anySlab = null;
         for (Holder<Block> holder : BuiltInRegistries.BLOCK.getTagOrEmpty(WOOL_SLABS)) {
             Block block = holder.value();
             if (BuiltInRegistries.BLOCK.getKey(block).getPath().equals(wanted)) {
                 return block.defaultBlockState();
             }
+            if (anySlab == null) {
+                anySlab = block.defaultBlockState();
+            }
         }
-        return Blocks.WHITE_WOOL.defaultBlockState();
+        return anySlab != null ? anySlab : Blocks.AIR.defaultBlockState();
     }
 }
