@@ -9,9 +9,7 @@ import net.minecraft.world.entity.player.Inventory;
 /** The engine screen: fuel slot, fuel gauge, speed bonus, and the player's inventory. */
 public class AirshipEngineScreen extends AbstractContainerScreen<AirshipEngineMenu> {
     public AirshipEngineScreen(AirshipEngineMenu menu, Inventory inventory, Component title) {
-        super(menu, inventory, title);
-        this.imageWidth = AirshipEngineLayout.PANEL_W;
-        this.imageHeight = AirshipEngineLayout.PANEL_H;
+        super(menu, inventory, title, AirshipEngineLayout.PANEL_W, AirshipEngineLayout.PANEL_H);
     }
 
     @Override
