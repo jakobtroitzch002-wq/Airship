@@ -44,6 +44,8 @@ public class AirshipEntity extends Entity {
     private final Map<BlockPos, BlockState> stateByPos = new HashMap<>();
     private final Map<BlockPos, Integer> engineFuel = new HashMap<>();
     private List<Vec3> seats = List.of();
+    private List<AirshipCushion> cushions = List.of();
+    private List<AirshipClientCushion> clientCushions = List.of();
     private BlockPos primarySeat;
     private int landCooldown;
     private BlockPos[] surface;
@@ -55,6 +57,15 @@ public class AirshipEntity extends Entity {
     private Vec3 velocity = Vec3.ZERO;
     private ServerPlayer lastPilot;
     private float yawOffset;
+
+    // client only: smoothing of the position the server sends
+    private static final double POS_SMOOTHING = 0.4;
+    private static final float YAW_SMOOTHING = 0.5F;
+    private Vec3 lastApplied;
+    private Vec3 netTarget;
+    private float lastAppliedYaw;
+    private float yawTarget;
+    private boolean netReady;
 
     // client only: positions of the last two ticks, used to render smoothly between them
     private Vec3 prevPos;
@@ -102,6 +113,47 @@ public class AirshipEntity extends Entity {
         this.cellVersion++;
     }
 
+    /** Cushions riding along with the ship (server side; they are re-created when the ship lands). */
+    public void setCushions(List<AirshipCushion> newCushions) {
+        this.cushions = List.copyOf(newCushions);
+        List<AirshipClientCushion> forClients = new ArrayList<>(newCushions.size());
+        for (AirshipCushion cushion : newCushions) {
+            forClients.add(new AirshipClientCushion(
+                    cushion.x(), cushion.y(), cushion.z(), cushion.yaw(), AirshipCushions.colorOf(cushion.data())));
+        }
+        this.clientCushions = List.copyOf(forClients);
+        computeSeats();
+        this.cellVersion++;
+    }
+
+    /** Sets the order of the seats: the n-th passenger sits on the n-th seat. */
+    public void setSeatOrder(List<Vec3> order) {
+        this.seats = List.copyOf(order);
+    }
+
+    public List<Vec3> getSeats() {
+        return seats;
+    }
+
+    public List<AirshipCushion> getCushions() {
+        return cushions;
+    }
+
+    public List<AirshipClientCushion> getClientCushions() {
+        return clientCushions;
+    }
+
+    /** Client side: apply everything the server sent about this ship. */
+    public void setClientData(AirshipBlocksPayload payload) {
+        setClientCells(payload.cells());
+        this.clientCushions = List.copyOf(payload.cushions());
+        computeSeats();
+        if (!payload.seats().isEmpty()) {
+            setSeatOrder(payload.seats());
+        }
+        this.cellVersion++;
+    }
+
     /** The seat the player who started the ship sits on (it becomes the first seat). */
     public void setPrimarySeat(BlockPos relativeSeat) {
         this.primarySeat = relativeSeat.immutable();
@@ -128,6 +180,13 @@ public class AirshipEntity extends Entity {
         for (BlockPos p : seatCells) {
             found.add(new Vec3(p.getX(), p.getY() + AirshipSeatBlock.SEAT_HEIGHT, p.getZ()));
         }
+        // Cushions are seats too, after the seat blocks.
+        List<Vec3> cushionSeats = new ArrayList<>();
+        for (AirshipClientCushion cushion : clientCushions) {
+            cushionSeats.add(new Vec3(cushion.x(), cushion.y() + AirshipCushions.SEAT_HEIGHT, cushion.z()));
+        }
+        cushionSeats.sort(Comparator.comparingDouble(Vec3::lengthSqr));
+        found.addAll(cushionSeats);
         this.seats = List.copyOf(found);
     }
 
@@ -232,11 +291,13 @@ public class AirshipEntity extends Entity {
     @Override
     public void readAdditionalSaveData(ValueInput input) {
         input.read("Cells", AirshipCell.CODEC.listOf()).ifPresent(this::setCells);
+        input.read("Cushions", AirshipCushion.CODEC.listOf()).ifPresent(this::setCushions);
     }
 
     @Override
     public void addAdditionalSaveData(ValueOutput output) {
         output.store("Cells", AirshipCell.CODEC.listOf(), getCellsWithFuel());
+        output.store("Cushions", AirshipCushion.CODEC.listOf(), new ArrayList<>(cushions));
     }
 
     @Override
@@ -320,11 +381,13 @@ public class AirshipEntity extends Entity {
 
     private void clientTick() {
         if (cells.isEmpty()) {
-            List<AirshipClientCell> pending = AirshipPendingCells.take(getId());
+            AirshipBlocksPayload pending = AirshipPendingCells.take(getId());
             if (pending != null) {
-                setClientCells(pending);
+                setClientData(pending);
             }
         }
+
+        smoothNetwork();
 
         // The server sends the position 20 times per second. Remember the last two positions so the
         // renderer can blend between them instead of jumping.
@@ -340,6 +403,43 @@ public class AirshipEntity extends Entity {
             curPos = position();
             curYaw = getYRot();
         }
+    }
+
+    /**
+     * Position packets arrive at arbitrary moments between client ticks. Using them directly makes the
+     * ship (and the camera of whoever sits in it) judder. Instead: keep an estimate of where the server's
+     * ship is (extrapolating with its speed between packets) and move the client ship smoothly towards it.
+     */
+    private void smoothNetwork() {
+        Vec3 pos = position();
+        float yaw = getYRot();
+        if (!netReady) {
+            netReady = true;
+            lastApplied = pos;
+            netTarget = pos;
+            lastAppliedYaw = yaw;
+            yawTarget = yaw;
+            return;
+        }
+
+        if (pos.distanceToSqr(lastApplied) > 1.0E-12) {
+            netTarget = pos; // a new authoritative position arrived
+        } else {
+            netTarget = netTarget.add(getDeltaMovement()); // keep going at the last known speed
+        }
+        if (Math.abs(Mth.wrapDegrees(yaw - lastAppliedYaw)) > 1.0E-4F) {
+            yawTarget = yaw;
+        }
+
+        Vec3 next = netTarget.distanceToSqr(lastApplied) > 16.0
+                ? netTarget
+                : lastApplied.add(netTarget.subtract(lastApplied).scale(POS_SMOOTHING));
+        float nextYaw = lastAppliedYaw + Mth.wrapDegrees(yawTarget - lastAppliedYaw) * YAW_SMOOTHING;
+
+        setPos(next.x, next.y, next.z);
+        setYRot(nextYaw);
+        lastApplied = next;
+        lastAppliedYaw = nextYaw;
     }
 
     private void serverTick(ServerLevel level) {

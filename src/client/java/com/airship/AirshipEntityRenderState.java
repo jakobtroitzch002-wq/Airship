@@ -5,6 +5,7 @@ import net.minecraft.client.renderer.entity.state.EntityRenderState;
 
 public class AirshipEntityRenderState extends EntityRenderState {
     public List<AirshipRenderPart> parts = List.of();
+    public List<AirshipRenderCushion> cushions = List.of();
     /** Difference between the smoothed ship position and the position the base renderer uses. */
     public double offsetX;
     public double offsetY;

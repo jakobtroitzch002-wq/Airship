@@ -24,7 +24,7 @@ import net.minecraft.world.phys.Vec3;
 public class AirshipEntityRenderer extends EntityRenderer<AirshipEntity, AirshipEntityRenderState> {
     private static final BlockDisplayContext DISPLAY_CONTEXT = BlockDisplayContext.create();
 
-    private record Cache(int version, List<AirshipRenderPart> parts) {}
+    private record Cache(int version, List<AirshipRenderPart> parts, List<AirshipRenderCushion> cushions) {}
 
     private final BlockModelResolver blockModelResolver;
     private final Map<AirshipEntity, Cache> caches = new WeakHashMap<>();
@@ -51,10 +51,19 @@ public class AirshipEntityRenderer extends EntityRenderer<AirshipEntity, Airship
                 blockModelResolver.update(model, cell.state(), DISPLAY_CONTEXT);
                 parts.add(new AirshipRenderPart(cell.pos().getX(), cell.pos().getY(), cell.pos().getZ(), model));
             }
-            cache = new Cache(entity.getCellVersion(), List.copyOf(parts));
+            // Cushions are entities and cannot be drawn by their own renderer here, so a wool slab of
+            // the same colour stands in for them while the ship is in the air.
+            List<AirshipRenderCushion> cushions = new ArrayList<>();
+            for (AirshipClientCushion cushion : entity.getClientCushions()) {
+                BlockModelRenderState model = new BlockModelRenderState();
+                blockModelResolver.update(model, AirshipCushions.standInState(cushion.color()), DISPLAY_CONTEXT);
+                cushions.add(new AirshipRenderCushion(cushion.x(), cushion.y(), cushion.z(), cushion.yaw(), model));
+            }
+            cache = new Cache(entity.getCellVersion(), List.copyOf(parts), List.copyOf(cushions));
             caches.put(entity, cache);
         }
         state.parts = cache.parts();
+        state.cushions = cache.cushions();
 
         // Blend between the last two tick positions so the ship moves smoothly.
         Vec3 smooth = entity.getSmoothPos(partialTick);
@@ -81,6 +90,15 @@ public class AirshipEntityRenderer extends EntityRenderer<AirshipEntity, Airship
             // The entity position is the centre of the Core block's footprint.
             poseStack.translate(part.x() - 0.5F, part.y(), part.z() - 0.5F);
             part.model().submit(poseStack, collector, state.lightCoords, OverlayTexture.NO_OVERLAY, 0);
+            poseStack.popPose();
+        }
+        for (AirshipRenderCushion cushion : state.cushions) {
+            poseStack.pushPose();
+            poseStack.translate((float) cushion.x(), (float) cushion.y(), (float) cushion.z());
+            poseStack.rotate(Axis.YP, -cushion.yaw() * Mth.DEG_TO_RAD);
+            poseStack.scale(0.75F, 0.5F, 0.75F);
+            poseStack.translate(-0.5F, 0.0F, -0.5F);
+            cushion.model().submit(poseStack, collector, state.lightCoords, OverlayTexture.NO_OVERLAY, 0);
             poseStack.popPose();
         }
         poseStack.popPose();

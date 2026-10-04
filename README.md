@@ -18,11 +18,25 @@ A Fabric mod for player-built airships in Minecraft 26.3.
    into solid blocks right where it is (snapped to the block grid and to the nearest 90 degrees),
    and you are standing on the seat. Rebuild whatever you like and sit down again.
 
+### Landing next to the ground or a wall
+
+When a ship lands, the Core remembers which neighbouring blocks were terrain. The next time you sit down,
+the scan skips them, so the ground is not pulled into the ship. For the very first takeoff there is nothing
+remembered yet: if the ship touches the ground, separate it with **Airship Build Blocks**.
+
 ## Engines
 
 Right-click an Airship Engine with coal or charcoal to fuel it (before takeoff). Every fuelled engine
 burns fuel while the pilot is thrusting and makes the ship faster (with diminishing returns).
 Without fuel the ship still flies at its base speed.
+
+## Cushions (Sitzkissen)
+
+Cushions (new in 26.3) are entities that players can sit on. On a ship they work as seats:
+- They count as seats when you start the ship (a ship needs at least one seat block or cushion).
+- Players sitting on a cushion stay on that cushion while the ship flies.
+- When the ship takes off, cushions are removed and drawn as a wool slab of the same colour; when it lands
+  they are placed again at the same spot (rotated with the ship).
 
 ## Notes
 

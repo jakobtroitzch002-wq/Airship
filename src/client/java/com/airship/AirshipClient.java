@@ -24,9 +24,9 @@ public final class AirshipClient implements ClientModInitializer {
             Minecraft client = Minecraft.getInstance();
             Entity entity = client.level == null ? null : client.level.getEntity(payload.entityId());
             if (entity instanceof AirshipEntity ship) {
-                ship.setClientCells(payload.cells());
+                ship.setClientData(payload);
             } else {
-                AirshipPendingCells.put(payload.entityId(), payload.cells());
+                AirshipPendingCells.put(payload.entityId(), payload);
             }
         });
 

@@ -2,11 +2,13 @@ package com.airship;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -14,6 +16,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.Clearable;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -22,6 +27,7 @@ import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.TagValueInput;
+import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -49,52 +55,62 @@ public final class AirshipAssembler {
             return InteractionResult.SUCCESS;
         }
 
-        AirshipStructureDetector.DetectionResult detection = AirshipStructureDetector.detect(level, startPos);
-        if (detection.capped()) {
-            tell(player, "Airship is too large (maximum " + AirshipStructureDetector.MAX_BLOCKS + " blocks)");
-            return InteractionResult.SUCCESS;
-        }
-
-        Set<BlockPos> blocks = detection.blocks();
-
-        // The Core is the anchor of the ship: use the one closest to where the player clicked.
-        BlockPos corePos = null;
-        double bestDistance = Double.MAX_VALUE;
-        for (BlockPos pos : blocks) {
-            if (level.getBlockState(pos).is(ModBlocks.AIRSHIP_CORE)) {
-                double distance = pos.distSqr(startPos);
-                if (distance < bestDistance) {
-                    bestDistance = distance;
-                    corePos = pos;
-                }
-            }
-        }
+        // 1. Find the Core this block belongs to.
+        BlockPos corePos = AirshipStructureDetector.findCore(level, startPos);
         if (corePos == null) {
             tell(player, "No Airship Core is connected to this block");
             return InteractionResult.SUCCESS;
         }
+
+        // 2. Scan the ship, skipping terrain that touched it when it last landed.
+        Set<BlockPos> ignored = new HashSet<>();
+        if (level.getBlockEntity(corePos) instanceof AirshipCoreBlockEntity coreEntity) {
+            for (BlockPos relative : coreEntity.getTerrain()) {
+                ignored.add(corePos.offset(relative).immutable());
+            }
+        }
+        AirshipStructureDetector.DetectionResult detection = AirshipStructureDetector.detect(level, startPos, ignored);
+        if (detection.capped()) {
+            tell(player, "Airship is too large (maximum " + AirshipStructureDetector.MAX_BLOCKS
+                    + " blocks). Is it touching the ground? Separate it with Airship Build Blocks.");
+            return InteractionResult.SUCCESS;
+        }
+
+        Set<BlockPos> blocks = detection.blocks();
+        if (!blocks.contains(corePos)) {
+            tell(player, "The Airship Core is not connected to this seat");
+            return InteractionResult.SUCCESS;
+        }
+
         BlockPos primarySeat = level.getBlockState(startPos).is(ModBlocks.AIRSHIP_SEAT)
                 ? new BlockPos(startPos.getX() - corePos.getX(), startPos.getY() - corePos.getY(),
                         startPos.getZ() - corePos.getZ())
                 : null;
 
+        // Cushions (entities attached to blocks) on the ship fly along and are seats, too.
+        AABB area = boundsOf(blocks);
+        List<Entity> cushionEntities = serverLevel.getEntitiesOfClass(
+                Entity.class, area, e -> AirshipCushions.isCushion(e) && isAttachedToShip(e, blocks));
+
         int balloons = 0;
-        int seatCount = 0;
+        int seatBlocks = 0;
         int engines = 0;
         for (BlockPos pos : blocks) {
             BlockState state = level.getBlockState(pos);
             if (state.is(ModBlocks.AIRSHIP_BALLOON)) {
                 balloons++;
             } else if (state.is(ModBlocks.AIRSHIP_SEAT)) {
-                seatCount++;
+                seatBlocks++;
             } else if (state.is(ModBlocks.AIRSHIP_ENGINE)) {
                 engines++;
             }
         }
+        int seatCount = seatBlocks + cushionEntities.size();
 
         int required = AirshipLift.requiredBalloons(blocks.size());
         tell(player, "Airship: " + blocks.size() + " blocks, " + balloons + "/" + required
-                + " balloons, " + seatCount + " seats, " + engines + " engines");
+                + " balloons, " + seatCount + " seats (" + cushionEntities.size() + " cushions), "
+                + engines + " engines");
 
         if (!AirshipLift.hasEnoughLift(balloons, required)) {
             tell(player, "Airship cannot fly: not enough balloons (1 per "
@@ -102,22 +118,107 @@ public final class AirshipAssembler {
             return InteractionResult.SUCCESS;
         }
         if (seatCount == 0) {
-            tell(player, "Airship cannot fly: it needs at least one seat");
+            tell(player, "Airship cannot fly: it needs at least one seat or cushion");
             return InteractionResult.SUCCESS;
         }
 
-        // Everybody standing on the ship must get a seat, otherwise they would fall through the deck.
-        Set<ServerPlayer> riders = new LinkedHashSet<>();
+        // Possible seats, as positions relative to the Core: seat blocks first, then cushions.
+        double originX = corePos.getX() + 0.5;
+        double originY = corePos.getY();
+        double originZ = corePos.getZ() + 0.5;
+        List<SeatSpot> spots = new ArrayList<>();
+        for (BlockPos pos : blocks) {
+            if (level.getBlockState(pos).is(ModBlocks.AIRSHIP_SEAT)) {
+                BlockPos relative = new BlockPos(
+                        pos.getX() - corePos.getX(), pos.getY() - corePos.getY(), pos.getZ() - corePos.getZ());
+                spots.add(new SeatSpot(
+                        new Vec3(relative.getX(), relative.getY() + AirshipSeatBlock.SEAT_HEIGHT, relative.getZ()),
+                        relative, null));
+            }
+        }
+        spots.sort(Comparator.comparingDouble((SeatSpot spot) -> spot.local().lengthSqr()));
+        List<SeatSpot> cushionSpots = new ArrayList<>();
+        for (Entity cushion : cushionEntities) {
+            cushionSpots.add(new SeatSpot(
+                    new Vec3(cushion.getX() - originX,
+                            cushion.getY() - originY + AirshipCushions.SEAT_HEIGHT,
+                            cushion.getZ() - originZ),
+                    null, cushion));
+        }
+        cushionSpots.sort(Comparator.comparingDouble((SeatSpot spot) -> spot.local().lengthSqr()));
+        spots.addAll(cushionSpots);
+
+        // Everybody who sits on a cushion or stands on the ship needs a seat, otherwise they would fall.
+        Set<ServerPlayer> riderSet = new LinkedHashSet<>();
         if (player instanceof ServerPlayer starter) {
-            riders.add(starter);
+            riderSet.add(starter);
         }
-        AABB area = boundsOf(blocks);
+        for (Entity cushion : cushionEntities) {
+            for (Entity passenger : cushion.getPassengers()) {
+                if (passenger instanceof ServerPlayer sitting) {
+                    riderSet.add(sitting);
+                }
+            }
+        }
         for (ServerPlayer other : serverLevel.getEntitiesOfClass(ServerPlayer.class, area, p -> isOnShip(p, blocks))) {
-            riders.add(other);
+            riderSet.add(other);
         }
+        List<ServerPlayer> riders = new ArrayList<>(riderSet);
         if (riders.size() > seatCount) {
             tell(player, "Not enough seats: " + riders.size() + " players on the airship, " + seatCount + " seats");
             return InteractionResult.SUCCESS;
+        }
+
+        // Give every rider a seat: the clicked seat for the starter, their own cushion for cushion sitters,
+        // otherwise the nearest free one. Passenger n sits on seat n, so the seat order follows the riders.
+        List<SeatSpot> free = new ArrayList<>(spots);
+        List<Vec3> seatOrder = new ArrayList<>();
+        for (ServerPlayer rider : riders) {
+            SeatSpot chosen = null;
+            if (rider == player && primarySeat != null) {
+                for (SeatSpot spot : free) {
+                    if (primarySeat.equals(spot.blockPos())) {
+                        chosen = spot;
+                        break;
+                    }
+                }
+            }
+            if (chosen == null) {
+                for (SeatSpot spot : free) {
+                    if (spot.cushion() != null && rider.getVehicle() == spot.cushion()) {
+                        chosen = spot;
+                        break;
+                    }
+                }
+            }
+            if (chosen == null) {
+                double best = Double.MAX_VALUE;
+                for (SeatSpot spot : free) {
+                    double distance = new Vec3(originX, originY, originZ).add(spot.local())
+                            .distanceToSqr(rider.position());
+                    if (distance < best) {
+                        best = distance;
+                        chosen = spot;
+                    }
+                }
+            }
+            free.remove(chosen);
+            seatOrder.add(chosen.local());
+        }
+        for (SeatSpot spot : free) {
+            seatOrder.add(spot.local());
+        }
+
+        // Take the cushions off the ship so they can be carried along.
+        List<AirshipCushion> cushions = new ArrayList<>();
+        for (Entity cushion : cushionEntities) {
+            cushion.ejectPassengers();
+            TagValueOutput output = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, level.registryAccess());
+            cushion.saveWithoutId(output);
+            cushions.add(new AirshipCushion(
+                    cushion.getX() - originX, cushion.getY() - originY, cushion.getZ() - originZ,
+                    cushion.getYRot(), output.buildResult()));
+            cushion.discard();
         }
 
         // Snapshot all blocks, then remove them from the world.
@@ -148,11 +249,10 @@ public final class AirshipAssembler {
         }
 
         AirshipEntity ship = new AirshipEntity(ModEntities.AIRSHIP, level);
-        ship.setPos(corePos.getX() + 0.5, corePos.getY(), corePos.getZ() + 0.5);
+        ship.setPos(originX, originY, originZ);
         ship.setCells(cells);
-        if (primarySeat != null) {
-            ship.setPrimarySeat(primarySeat);
-        }
+        ship.setCushions(cushions);
+        ship.setSeatOrder(seatOrder);
         serverLevel.addFreshEntity(ship);
 
         for (ServerPlayer rider : riders) {
@@ -162,6 +262,9 @@ public final class AirshipAssembler {
         tell(player, "Airship ready. W/A/S/D move, Space up, Ctrl down. Shift leaves the seat and lands the ship.");
         return InteractionResult.SUCCESS;
     }
+
+    /** A place to sit, relative to the Core: a seat block (blockPos set) or a cushion (cushion set). */
+    private record SeatSpot(Vec3 local, BlockPos blockPos, Entity cushion) {}
 
     // ------------------------------------------------------------------ disassemble
 
@@ -195,9 +298,80 @@ public final class AirshipAssembler {
             }
         }
 
+        rememberTerrainContacts(level, cells, anchor);
+        restoreCushions(level, ship.getCushions(), anchor, snappedYaw(ship.getYRot()));
+
         ship.ejectPassengers();
         ship.discard();
         return true;
+    }
+
+    private static boolean isAttachedToShip(Entity entity, Set<BlockPos> blocks) {
+        BlockPos at = entity.blockPosition();
+        BlockPos below = BlockPos.containing(entity.getX(), entity.getY() - 0.01, entity.getZ());
+        return blocks.contains(at) || blocks.contains(below);
+    }
+
+    /** Re-creates the ship's cushions on the landed ship (the blocks they sit on exist again by now). */
+    private static void restoreCushions(ServerLevel level, List<AirshipCushion> cushions, BlockPos anchor, float snappedYaw) {
+        Vec3 origin = new Vec3(anchor.getX() + 0.5, anchor.getY(), anchor.getZ() + 0.5);
+        float rotation = (float) -Math.toRadians(snappedYaw);
+        for (AirshipCushion cushion : cushions) {
+            Entity entity = EntityTypes.CUSHION.create(level, EntitySpawnReason.SPAWN_ITEM_USE);
+            if (entity == null) {
+                continue;
+            }
+            CompoundTag data = cushion.data().copy();
+            data.remove("UUID"); // the original is gone, the copy gets a fresh identity
+            entity.load(TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), data));
+
+            Vec3 world = origin.add(new Vec3(cushion.x(), cushion.y(), cushion.z()).yRot(rotation));
+            entity.setPos(world.x, world.y, world.z);
+            entity.setYRot(cushion.yaw() + snappedYaw);
+            level.addFreshEntity(entity);
+        }
+    }
+
+    /**
+     * Stores, in every Core of the landed ship, which neighbouring blocks are terrain (anything next to
+     * the ship that is not part of it), so the next scan does not pull that terrain into the ship.
+     */
+    private static void rememberTerrainContacts(ServerLevel level, List<AirshipCell> cells, BlockPos anchor) {
+        Set<BlockPos> shipBlocks = new HashSet<>();
+        List<BlockPos> cores = new ArrayList<>();
+        for (AirshipCell cell : cells) {
+            BlockPos target = anchor.offset(cell.pos()).immutable();
+            shipBlocks.add(target);
+            if (cell.state().is(ModBlocks.AIRSHIP_CORE)) {
+                cores.add(target);
+            }
+        }
+
+        Set<BlockPos> contacts = new HashSet<>();
+        for (BlockPos block : shipBlocks) {
+            for (Direction direction : Direction.values()) {
+                BlockPos neighbour = block.relative(direction);
+                if (shipBlocks.contains(neighbour)) {
+                    continue;
+                }
+                BlockState state = level.getBlockState(neighbour);
+                if (state.isAir() || state.canBeReplaced() || ModBlocks.isAirshipBuildBlock(state.getBlock())) {
+                    continue;
+                }
+                contacts.add(neighbour.immutable());
+            }
+        }
+
+        for (BlockPos core : cores) {
+            if (level.getBlockEntity(core) instanceof AirshipCoreBlockEntity coreEntity) {
+                List<BlockPos> relative = new ArrayList<>(contacts.size());
+                for (BlockPos contact : contacts) {
+                    relative.add(new BlockPos(
+                            contact.getX() - core.getX(), contact.getY() - core.getY(), contact.getZ() - core.getZ()));
+                }
+                coreEntity.setTerrain(relative);
+            }
+        }
     }
 
     /** The ship's cells rotated by the ship's yaw, rounded to a multiple of 90 degrees. */
