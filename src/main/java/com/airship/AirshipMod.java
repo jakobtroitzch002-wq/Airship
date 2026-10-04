@@ -25,12 +25,17 @@ public final class AirshipMod implements ModInitializer {
                 AirshipBlocksPayload.TYPE,
                 AirshipBlocksPayload.CODEC
         );
+        PayloadTypeRegistry.clientboundPlay().register(
+                AirshipStatePayload.TYPE,
+                AirshipStatePayload.CODEC
+        );
         AirshipControls.registerServer();
 
         // Send the ship's blocks to every player that starts seeing the ship.
         EntityTrackingEvents.START_TRACKING.register((trackedEntity, player) -> {
             if (trackedEntity instanceof AirshipEntity ship) {
                 ServerPlayNetworking.send(player, new AirshipBlocksPayload(ship.getId(), ship.clientCells(), ship.getClientCushions(), ship.getSeats()));
+                ServerPlayNetworking.send(player, ship.statePayload(player.level().getGameTime()));
             }
         });
 

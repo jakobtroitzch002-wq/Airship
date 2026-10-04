@@ -13,7 +13,7 @@ A Fabric mod for player-built airships in Minecraft 26.3.
    so you need one seat per player.
 3. **Fly.** The first passenger is the pilot. The ship turns to face the way you look.
    - `W/A/S/D` move relative to where you look
-   - `Space` ascend, `Ctrl` descend
+   - `Space` ascend, `C` descend (rebindable under Controls, "Airship: descend")
 4. **Land:** press `Shift` to leave the seat. As soon as the last player leaves, the ship turns back
    into solid blocks right where it is (snapped to the block grid and to the nearest 90 degrees),
    and you are standing on the seat. Rebuild whatever you like and sit down again.

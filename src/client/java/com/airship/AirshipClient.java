@@ -1,16 +1,31 @@
 package com.airship;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
 import net.minecraft.world.entity.Entity;
 
 public final class AirshipClient implements ClientModInitializer {
+    /**
+     * Descending has its own key (default C, rebindable) instead of the sprint key: the sprint key can
+     * report "held" while toggled, which made the ship sink on its own.
+     */
+    private static final KeyMapping DESCEND = KeyMappingHelper.registerKeyMapping(
+            new KeyMapping(
+                    "key.airship.descend",
+                    InputConstants.KEY_C,
+                    KeyMapping.Category.MISC
+            )
+    );
+
     private static int lastSentFlags = -1;
     private static int tickCounter;
 
@@ -18,6 +33,14 @@ public final class AirshipClient implements ClientModInitializer {
     public void onInitializeClient() {
         BlockEntityRenderers.register(ModBlockEntities.AIRSHIP_BUILD, AirshipBuildBlockRenderer::new);
         EntityRendererRegistry.register(ModEntities.AIRSHIP, AirshipEntityRenderer::new);
+
+        // Exact position and rotation of a ship, sent every tick while it moves.
+        ClientPlayNetworking.registerGlobalReceiver(AirshipStatePayload.TYPE, (payload, context) -> {
+            Minecraft client = Minecraft.getInstance();
+            if (client.level != null && client.level.getEntity(payload.entityId()) instanceof AirshipEntity ship) {
+                ship.receiveSnapshot(payload);
+            }
+        });
 
         // Block data of a ship: apply it now if the entity exists, otherwise park it until it does.
         ClientPlayNetworking.registerGlobalReceiver(AirshipBlocksPayload.TYPE, (payload, context) -> {
@@ -50,7 +73,7 @@ public final class AirshipClient implements ClientModInitializer {
                 if (options.keyLeft.isDown()) flags |= AirshipControlPayload.LEFT;
                 if (options.keyRight.isDown()) flags |= AirshipControlPayload.RIGHT;
                 if (options.keyJump.isDown()) flags |= AirshipControlPayload.UP;
-                if (options.keySprint.isDown()) flags |= AirshipControlPayload.DOWN;
+                if (DESCEND.isDown()) flags |= AirshipControlPayload.DOWN;
             }
 
             tickCounter++;

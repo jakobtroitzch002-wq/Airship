@@ -6,6 +6,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -58,14 +60,19 @@ public class AirshipEntity extends Entity {
     private ServerPlayer lastPilot;
     private float yawOffset;
 
-    // client only: smoothing of the position the server sends
-    private static final double POS_SMOOTHING = 0.4;
-    private static final float YAW_SMOOTHING = 0.5F;
-    private Vec3 lastApplied;
-    private Vec3 netTarget;
-    private float lastAppliedYaw;
-    private float yawTarget;
-    private boolean netReady;
+    // client only: buffered snapshots from the server, played back a little behind real time
+    private record Snapshot(long tick, Vec3 pos, float yaw) {}
+
+    private static final double INTERPOLATION_DELAY_TICKS = 2.0;
+    private final List<Snapshot> snapshots = new ArrayList<>();
+    private long latestTick;
+    private double renderTick;
+    private boolean snapshotsReady;
+
+    // server only: what the clients were told last
+    private Vec3 lastSentPos;
+    private float lastSentYaw;
+    private long lastSentTick = Long.MIN_VALUE / 2;
 
     // client only: positions of the last two ticks, used to render smoothly between them
     private Vec3 prevPos;
@@ -387,7 +394,7 @@ public class AirshipEntity extends Entity {
             }
         }
 
-        smoothNetwork();
+        applySnapshots();
 
         // The server sends the position 20 times per second. Remember the last two positions so the
         // renderer can blend between them instead of jumping.
@@ -405,41 +412,91 @@ public class AirshipEntity extends Entity {
         }
     }
 
+    /** Client side: a new snapshot of the ship's position and rotation arrived from the server. */
+    public void receiveSnapshot(AirshipStatePayload payload) {
+        Snapshot snapshot = new Snapshot(payload.tick(), new Vec3(payload.x(), payload.y(), payload.z()), payload.yaw());
+        if (!snapshots.isEmpty()) {
+            Snapshot last = snapshots.get(snapshots.size() - 1);
+            if (snapshot.tick() < last.tick()) {
+                return; // older than what we already have
+            }
+            if (snapshot.tick() == last.tick()) {
+                snapshots.set(snapshots.size() - 1, snapshot);
+                return;
+            }
+        }
+        snapshots.add(snapshot);
+        latestTick = snapshot.tick();
+        if (!snapshotsReady) {
+            snapshotsReady = true;
+            renderTick = latestTick - INTERPOLATION_DELAY_TICKS;
+        }
+        while (snapshots.size() > 16) {
+            snapshots.remove(0);
+        }
+    }
+
     /**
-     * Position packets arrive at arbitrary moments between client ticks. Using them directly makes the
-     * ship (and the camera of whoever sits in it) judder. Instead: keep an estimate of where the server's
-     * ship is (extrapolating with its speed between packets) and move the client ship smoothly towards it.
+     * Moves the client ship along the buffered snapshots at a steady pace (one server tick per client tick),
+     * a couple of ticks behind the latest one. Uneven packet arrival is absorbed by that buffer.
      */
-    private void smoothNetwork() {
-        Vec3 pos = position();
-        float yaw = getYRot();
-        if (!netReady) {
-            netReady = true;
-            lastApplied = pos;
-            netTarget = pos;
-            lastAppliedYaw = yaw;
-            yawTarget = yaw;
+    private void applySnapshots() {
+        if (!snapshotsReady || snapshots.isEmpty()) {
             return;
         }
+        renderTick = Mth.clamp(renderTick + 1.0, latestTick - 3.0, (double) latestTick);
 
-        if (pos.distanceToSqr(lastApplied) > 1.0E-12) {
-            netTarget = pos; // a new authoritative position arrived
-        } else {
-            netTarget = netTarget.add(getDeltaMovement()); // keep going at the last known speed
+        Snapshot first = snapshots.get(0);
+        Snapshot last = snapshots.get(snapshots.size() - 1);
+        Vec3 pos = last.pos();
+        float yaw = last.yaw();
+        if (renderTick <= first.tick()) {
+            pos = first.pos();
+            yaw = first.yaw();
+        } else if (renderTick < last.tick()) {
+            for (int i = 0; i < snapshots.size() - 1; i++) {
+                Snapshot a = snapshots.get(i);
+                Snapshot b = snapshots.get(i + 1);
+                if (renderTick >= a.tick() && renderTick <= b.tick()) {
+                    double f = (renderTick - a.tick()) / (double) (b.tick() - a.tick());
+                    pos = new Vec3(
+                            a.pos().x + (b.pos().x - a.pos().x) * f,
+                            a.pos().y + (b.pos().y - a.pos().y) * f,
+                            a.pos().z + (b.pos().z - a.pos().z) * f);
+                    yaw = a.yaw() + Mth.wrapDegrees(b.yaw() - a.yaw()) * (float) f;
+                    break;
+                }
+            }
         }
-        if (Math.abs(Mth.wrapDegrees(yaw - lastAppliedYaw)) > 1.0E-4F) {
-            yawTarget = yaw;
+
+        while (snapshots.size() > 2 && snapshots.get(1).tick() <= renderTick) {
+            snapshots.remove(0);
         }
+        setPos(pos.x, pos.y, pos.z);
+        setYRot(yaw);
+    }
 
-        Vec3 next = netTarget.distanceToSqr(lastApplied) > 16.0
-                ? netTarget
-                : lastApplied.add(netTarget.subtract(lastApplied).scale(POS_SMOOTHING));
-        float nextYaw = lastAppliedYaw + Mth.wrapDegrees(yawTarget - lastAppliedYaw) * YAW_SMOOTHING;
+    /** Server side: the current state, as sent to clients. */
+    public AirshipStatePayload statePayload(long gameTick) {
+        Vec3 pos = position();
+        return new AirshipStatePayload(getId(), gameTick, pos.x, pos.y, pos.z, getYRot());
+    }
 
-        setPos(next.x, next.y, next.z);
-        setYRot(nextYaw);
-        lastApplied = next;
-        lastAppliedYaw = nextYaw;
+    /** Server side: tell everybody who sees the ship where it is (only when it changed, plus a heartbeat). */
+    private void broadcastState(ServerLevel level) {
+        Vec3 pos = position();
+        float yaw = getYRot();
+        long now = level.getGameTime();
+        if (pos.equals(lastSentPos) && yaw == lastSentYaw && now - lastSentTick < 20) {
+            return;
+        }
+        lastSentPos = pos;
+        lastSentYaw = yaw;
+        lastSentTick = now;
+        AirshipStatePayload payload = statePayload(now);
+        for (ServerPlayer tracking : PlayerLookup.tracking(this)) {
+            ServerPlayNetworking.send(tracking, payload);
+        }
     }
 
     private void serverTick(ServerLevel level) {
@@ -566,6 +623,7 @@ public class AirshipEntity extends Entity {
             setPos(result.pos().x, result.pos().y, result.pos().z);
         }
         setDeltaMovement(velocity);
+        broadcastState(level);
     }
 
     private static double approach(double current, double target, double step) {

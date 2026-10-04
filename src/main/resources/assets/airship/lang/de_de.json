@@ -4,5 +4,6 @@
   "block.airship.airship_engine": "Luftschiff-Antrieb",
   "block.airship.airship_seat": "Luftschiff-Sitz",
   "block.airship.airship_build": "Luftschiff-Baublock",
+  "key.airship.descend": "Luftschiff: sinken",
   "entity.airship.airship": "Luftschiff"
 }
