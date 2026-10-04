@@ -9,6 +9,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.Options;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
 import net.minecraft.world.entity.Entity;
@@ -33,6 +34,17 @@ public final class AirshipClient implements ClientModInitializer {
     public void onInitializeClient() {
         BlockEntityRenderers.register(ModBlockEntities.AIRSHIP_BUILD, AirshipBuildBlockRenderer::new);
         EntityRendererRegistry.register(ModEntities.AIRSHIP, AirshipEntityRenderer::new);
+
+        // Engine screen (a container menu) and Core screen (opened by the server's check result).
+        MenuScreens.register(ModMenus.ENGINE, AirshipEngineScreen::new);
+        ClientPlayNetworking.registerGlobalReceiver(AirshipCoreInfoPayload.TYPE, (payload, context) -> {
+            Minecraft client = Minecraft.getInstance();
+            if (client.gui.screen() instanceof AirshipCoreScreen screen && screen.isFor(payload.pos())) {
+                screen.update(payload);
+            } else {
+                client.gui.setScreen(new AirshipCoreScreen(payload));
+            }
+        });
 
         // Exact position and rotation of a ship, sent every tick while it moves.
         ClientPlayNetworking.registerGlobalReceiver(AirshipStatePayload.TYPE, (payload, context) -> {

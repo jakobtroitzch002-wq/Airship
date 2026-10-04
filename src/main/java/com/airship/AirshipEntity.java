@@ -33,9 +33,9 @@ import net.minecraft.world.phys.Vec3;
  */
 public class AirshipEntity extends Entity {
     // --- flight tuning (blocks per tick) ---
-    private static final double BASE_SPEED = 0.10;
-    private static final double ENGINE_BOOST = 0.22;
-    private static final double ENGINE_FALLOFF = 0.70;
+    public static final double BASE_SPEED = 0.10;
+    public static final double ENGINE_BOOST = 0.22;
+    public static final double ENGINE_FALLOFF = 0.70;
     private static final double VERTICAL_SPEED = 0.08;
     private static final double HORIZONTAL_ACCEL = 0.012;
     private static final double VERTICAL_ACCEL = 0.02;

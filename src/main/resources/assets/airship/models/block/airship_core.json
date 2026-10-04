@@ -1,6 +1,7 @@
 {
-  "parent": "minecraft:block/cube_all",
+  "parent": "minecraft:block/cube_column",
   "textures": {
-    "all": "minecraft:block/iron_block"
+    "end": "airship:block/airship_core_top",
+    "side": "airship:block/airship_core_side"
   }
 }

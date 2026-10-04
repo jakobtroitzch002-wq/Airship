@@ -8,8 +8,9 @@ A Fabric mod for player-built airships in Minecraft 26.3.
    control block), **Airship Balloons** (1 per 5 blocks of the ship) and optionally **Airship Engines**
    and **cushions** for passengers. Use **Airship Build Blocks** as a separator so the ship does not touch
    the terrain: the structure scan never crosses a build block.
-2. **Check it:** right-click the **Core**. It reports blocks, balloons, cushions and engines and tells you what
-   is missing. It does not start the ship.
+2. **Check it:** right-click the **Core**. The Core screen shows a checklist (Airship Seat, balloons, size,
+   cushions, engines with fuel) and tells you what is missing. "Neu prüfen" checks again, "Gelände vergessen"
+   clears the terrain the Core remembers from the last landing. It does not start the ship.
 3. **Fly:** right-click the **Airship Seat** to sit down. The connected structure lifts off and you are the
    pilot. Only the Airship Seat steers. The seat has a direction (like a chair, it faces the way you looked when
    you placed it): that is the **front of the ship**. The ship turns so its front points where you look.
@@ -29,9 +30,15 @@ remembered yet: if the ship touches the ground, separate it with **Airship Build
 
 ## Engines
 
-Right-click an Airship Engine with coal or charcoal to fuel it (before takeoff). Every fuelled engine
-burns fuel while the pilot is thrusting and makes the ship faster (with diminishing returns).
-Without fuel the ship still flies at its base speed.
+Right-click an Airship Engine with an empty hand to open its screen: put coal or charcoal into the fuel slot
+(or right-click the engine holding coal). Every fuelled engine burns fuel while the pilot is thrusting and makes
+the ship faster (with diminishing returns). Without fuel the ship still flies at its base speed.
+
+## Look
+
+Blocks and screens use the "Messing & Dampf" design: walnut and brass compass (Core), canvas with rope net
+(Balloon), copper boiler (Engine). The block textures are in `assets/airship/textures/block/`
+(`airship_<block>_top.png` and `airship_<block>_side.png`, 16x16).
 
 ## Cushions (Sitzkissen)
 

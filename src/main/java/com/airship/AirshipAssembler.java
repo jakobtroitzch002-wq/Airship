@@ -50,9 +50,69 @@ public final class AirshipAssembler {
 
     // ------------------------------------------------------------------ assemble
 
-    /** Right-click on the Core: check the ship and report, without taking off. */
-    public static InteractionResult inspect(Level level, BlockPos startPos, Player player) {
-        return run(level, startPos, player, false);
+    /** Right-click on the Core: check the ship and open the Core screen, without taking off. */
+    public static InteractionResult inspect(Level level, BlockPos corePos, Player player) {
+        if (level instanceof ServerLevel serverLevel && player instanceof ServerPlayer serverPlayer) {
+            sendInspection(serverLevel, corePos, serverPlayer);
+        }
+        return InteractionResult.SUCCESS;
+    }
+
+    /** Checks the ship around this Core and sends the result to the player (the Core screen shows it). */
+    public static void sendInspection(ServerLevel level, BlockPos corePos, ServerPlayer player) {
+        ServerPlayNetworking.send(player, analyze(level, corePos));
+    }
+
+    /** Counts what the ship has and what it is missing, without changing anything. */
+    public static AirshipCoreInfoPayload analyze(ServerLevel level, BlockPos corePos) {
+        Set<BlockPos> ignored = new HashSet<>();
+        if (level.getBlockEntity(corePos) instanceof AirshipCoreBlockEntity coreEntity) {
+            for (BlockPos relative : coreEntity.getTerrain()) {
+                ignored.add(corePos.offset(relative).immutable());
+            }
+        }
+        AirshipStructureDetector.DetectionResult detection = AirshipStructureDetector.detect(level, corePos, ignored);
+        int max = AirshipStructureDetector.MAX_BLOCKS;
+        if (detection.capped()) {
+            return new AirshipCoreInfoPayload(
+                    corePos, false, "Zu groß oder berührt das Gelände", max, max, 0, 0, 0, 0, 0, 0, 0);
+        }
+
+        Set<BlockPos> blocks = detection.blocks();
+        AABB area = boundsOf(blocks);
+        int cushions = level.getEntitiesOfClass(
+                Entity.class, area, e -> AirshipCushions.isCushion(e) && isAttachedToShip(e, blocks)).size();
+
+        int balloons = 0;
+        int seats = 0;
+        int engines = 0;
+        int fuel = 0;
+        for (BlockPos pos : blocks) {
+            BlockState state = level.getBlockState(pos);
+            if (state.is(ModBlocks.AIRSHIP_BALLOON)) {
+                balloons++;
+            } else if (state.is(ModBlocks.AIRSHIP_SEAT)) {
+                seats++;
+            } else if (state.is(ModBlocks.AIRSHIP_ENGINE)) {
+                engines++;
+                if (level.getBlockEntity(pos) instanceof AirshipEngineBlockEntity engine) {
+                    fuel += engine.getFuel();
+                }
+            }
+        }
+
+        int required = AirshipLift.requiredBalloons(blocks.size());
+        String problem = "";
+        if (seats == 0) {
+            problem = "Kein Steuersitz";
+        } else if (seats > 1) {
+            problem = "Mehr als ein Steuersitz";
+        } else if (!AirshipLift.hasEnoughLift(balloons, required)) {
+            problem = "Zu wenige Ballons";
+        }
+        return new AirshipCoreInfoPayload(
+                corePos, problem.isEmpty(), problem, blocks.size(), max, balloons, required, seats, cushions,
+                engines, fuel, engines * AirshipEngineBlockEntity.MAX_FUEL);
     }
 
     /**
