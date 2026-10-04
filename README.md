@@ -10,7 +10,9 @@ A Fabric mod for player-built airships in Minecraft 26.3.
    the terrain: the structure scan never crosses a build block.
 2. **Check it:** right-click the **Core**. The Core screen shows a checklist (Airship Seat, balloons, size,
    cushions, engines with fuel) and tells you what is missing. "Neu prüfen" checks again, "Gelände vergessen"
-   clears the terrain the Core remembers from the last landing. (Fuel is shown on the engine's own screen.) It does not start the ship.
+   clears the terrain the Core remembers from the last landing (you normally never need it). Fuel is shown on the
+   engine's own screen. If the ship cannot start (no seat, not enough balloons, too big ...), the Core screen opens
+   by itself and shows the problem. Nothing is written to the chat. It does not start the ship.
 3. **Fly:** right-click the **Airship Seat** to sit down. The connected structure lifts off and you are the
    pilot. Only the Airship Seat steers. The seat has a direction (like a chair, it faces the way you looked when
    you placed it): that is the **front of the ship**. The ship turns so its front points where you look.
@@ -30,8 +32,8 @@ remembered yet: if the ship touches the ground, separate it with **Airship Build
 
 ## Engines
 
-Right-click an Airship Engine with an empty hand to open its screen. Put fuel into the fuel slot (or right-click
-the engine holding fuel). The big timer shows how long the engine still runs; it only counts down while the
+Right-click an Airship Engine to open its screen. Fuel is added only there, by putting it into the fuel slot
+(shift-click works too). The big timer shows how long the engine still runs; it only counts down while the
 pilot is thrusting, so it stays put while the ship hovers or is landed. The tank holds 20:00 minutes.
 
 | Fuel | Time per item |
@@ -67,3 +69,5 @@ Cushions (new in 26.3) are entities that players can sit on. On a ship they are 
 - While flying, the ship's blocks are not world blocks: sit in your seat. Landing needs free space
   around the ship (build blocks count as obstacles when landing).
 - Blocks with special rendering (chests, signs, ...) are shown with their plain block model while flying.
+- See-through blocks of the ship (glass, glass panes, ice, slime, honey) are drawn in a later render stage, after
+  the water, so water behind them stays visible while the ship flies.

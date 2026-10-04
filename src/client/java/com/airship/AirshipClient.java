@@ -34,6 +34,7 @@ public final class AirshipClient implements ClientModInitializer {
     public void onInitializeClient() {
         BlockEntityRenderers.register(ModBlockEntities.AIRSHIP_BUILD, AirshipBuildBlockRenderer::new);
         EntityRendererRegistry.register(ModEntities.AIRSHIP, AirshipEntityRenderer::new);
+        AirshipLateRender.register();
 
         // Engine screen (a container menu) and Core screen (opened by the server's check result).
         MenuScreens.register(ModMenus.ENGINE, AirshipEngineScreen::new);

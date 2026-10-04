@@ -576,8 +576,8 @@ public class AirshipEntity extends Entity {
                 if (level.getGameTime() % 100 == 0) {
                     for (ServerPlayer nearby : level.getEntitiesOfClass(
                             ServerPlayer.class, getBoundingBox().inflate(32.0))) {
-                        nearby.sendSystemMessage(Component.literal(
-                                "Airship cannot land here: not enough free space"));
+                        nearby.sendOverlayMessage(Component.literal(
+                                "Luftschiff kann hier nicht landen: zu wenig Platz"));
                     }
                 }
             }
@@ -670,9 +670,6 @@ public class AirshipEntity extends Entity {
         // --- move with collision ---
         if (velocity.lengthSqr() > 1.0E-10) {
             AirshipCollision.Result result = AirshipCollision.move(level, this, position(), velocity);
-            if (up && result.hitY() && velocity.y > 0.0 && pilot != null && level.getGameTime() % 40 == 0) {
-                pilot.sendSystemMessage(Component.literal("Airship is blocked above"));
-            }
             velocity = new Vec3(
                     result.hitX() ? 0.0 : velocity.x,
                     result.hitY() ? 0.0 : velocity.y,

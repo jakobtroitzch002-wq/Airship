@@ -131,7 +131,17 @@ public final class AirshipAssembler {
         // 1. Find the Core this block belongs to.
         BlockPos corePos = AirshipStructureDetector.findCore(level, startPos);
         if (corePos == null) {
-            tell(player, "No Airship Core is connected to this block");
+            tell(player, "Kein Luftschiff-Kern verbunden");
+            return InteractionResult.SUCCESS;
+        }
+
+        if (!(player instanceof ServerPlayer starter)) {
+            return InteractionResult.SUCCESS;
+        }
+        // Everything that is wrong (no seat, not enough balloons, too big ...) is shown on the Core screen.
+        AirshipCoreInfoPayload info = analyze(serverLevel, corePos);
+        if (!info.ready()) {
+            ServerPlayNetworking.send(starter, info);
             return InteractionResult.SUCCESS;
         }
 
@@ -144,14 +154,13 @@ public final class AirshipAssembler {
         }
         AirshipStructureDetector.DetectionResult detection = AirshipStructureDetector.detect(level, startPos, ignored);
         if (detection.capped()) {
-            tell(player, "Airship is too large (maximum " + AirshipStructureDetector.MAX_BLOCKS
-                    + " blocks). Is it touching the ground? Separate it with Airship Build Blocks.");
+            fail(starter, info, "Zu groß oder berührt das Gelände");
             return InteractionResult.SUCCESS;
         }
 
         Set<BlockPos> blocks = detection.blocks();
         if (!blocks.contains(corePos)) {
-            tell(player, "The Airship Core is not connected to this seat");
+            fail(starter, info, "Kern ist nicht mit dem Sitz verbunden");
             return InteractionResult.SUCCESS;
         }
 
@@ -177,30 +186,7 @@ public final class AirshipAssembler {
         }
         int cushionCount = cushionEntities.size();
 
-        int required = AirshipLift.requiredBalloons(blocks.size());
-        tell(player, "Airship: " + blocks.size() + " blocks, " + balloons + "/" + required
-                + " balloons, " + cushionCount + " cushions, " + engines + " engines");
-
-        if (seatBlocks == 0) {
-            tell(player, "Airship cannot fly: it needs an Airship Seat (the control block)");
-            return InteractionResult.SUCCESS;
-        }
-        if (seatBlocks > 1) {
-            tell(player, "Airship cannot fly: only one Airship Seat (control block) per ship, found " + seatBlocks);
-            return InteractionResult.SUCCESS;
-        }
-        if (!AirshipLift.hasEnoughLift(balloons, required)) {
-            tell(player, "Airship cannot fly: not enough balloons (1 per "
-                    + AirshipLift.BLOCKS_PER_BALLOON + " blocks)");
-            return InteractionResult.SUCCESS;
-        }
-        if (!launch) {
-            tell(player, "Airship is ready. Sit down on the Airship Seat to fly it.");
-            return InteractionResult.SUCCESS;
-        }
-        if (!(player instanceof ServerPlayer pilot)) {
-            return InteractionResult.SUCCESS;
-        }
+        ServerPlayer pilot = starter;
 
         // Seats relative to the Core: index 0 is the control seat, then the cushions (nearest first).
         double originX = corePos.getX() + 0.5;
@@ -241,8 +227,7 @@ public final class AirshipAssembler {
         }
         List<ServerPlayer> riders = new ArrayList<>(riderSet);
         if (riders.size() > 1 + cushionCount) {
-            tell(player, "Not enough seats: " + riders.size() + " players on the airship, but only the Airship Seat"
-                    + " and " + cushionCount + " cushions. Everybody who is not the pilot needs a cushion.");
+            fail(starter, info, "Zu wenige Sitzkissen: " + (riders.size() - 1) + " Mitfahrer, " + cushionCount + " Kissen");
             return InteractionResult.SUCCESS;
         }
 
@@ -343,7 +328,6 @@ public final class AirshipAssembler {
             ServerPlayNetworking.send(tracking, seatMap);
         }
 
-        tell(player, "You are the pilot. W/A/S/D move, Space up, C down. Shift leaves the seat and lands the ship.");
         return InteractionResult.SUCCESS;
     }
 
@@ -574,7 +558,15 @@ public final class AirshipAssembler {
         return blocks.contains(feet) || blocks.contains(below);
     }
 
+    /** Short text above the hotbar (not in the chat). Only for cases without a screen, e.g. no Core nearby. */
     private static void tell(Player player, String message) {
-        player.sendSystemMessage(Component.literal(message));
+        player.sendOverlayMessage(Component.literal(message));
+    }
+
+    /** Shows a problem on the Core screen. */
+    private static void fail(ServerPlayer player, AirshipCoreInfoPayload base, String problem) {
+        ServerPlayNetworking.send(player, new AirshipCoreInfoPayload(
+                base.pos(), false, problem, base.blocks(), base.maxBlocks(), base.balloons(), base.balloonsRequired(),
+                base.seatBlocks(), base.cushions(), base.engines(), base.fuelTicks(), base.maxFuelTicks()));
     }
 }

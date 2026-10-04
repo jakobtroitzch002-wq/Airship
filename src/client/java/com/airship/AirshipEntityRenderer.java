@@ -14,7 +14,9 @@ import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.util.Mth;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -24,7 +26,12 @@ import net.minecraft.world.phys.Vec3;
 public class AirshipEntityRenderer extends EntityRenderer<AirshipEntity, AirshipEntityRenderState> {
     private static final BlockDisplayContext DISPLAY_CONTEXT = BlockDisplayContext.create();
 
-    private record Cache(int version, List<AirshipRenderPart> parts, List<AirshipRenderCushion> cushions) {}
+    private record Cache(
+            int version,
+            List<AirshipRenderPart> parts,
+            List<AirshipRenderPart> lateParts,
+            List<AirshipRenderCushion> cushions
+    ) {}
 
     private final BlockModelResolver blockModelResolver;
     private final Map<AirshipEntity, Cache> caches = new WeakHashMap<>();
@@ -46,10 +53,14 @@ public class AirshipEntityRenderer extends EntityRenderer<AirshipEntity, Airship
         Cache cache = caches.get(entity);
         if (cache == null || cache.version() != entity.getCellVersion()) {
             List<AirshipRenderPart> parts = new ArrayList<>();
+            List<AirshipRenderPart> lateParts = new ArrayList<>();
             for (AirshipClientCell cell : entity.getExposedCells()) {
                 BlockModelRenderState model = new BlockModelRenderState();
                 blockModelResolver.update(model, cell.state(), DISPLAY_CONTEXT);
-                parts.add(new AirshipRenderPart(cell.pos().getX(), cell.pos().getY(), cell.pos().getZ(), model));
+                AirshipRenderPart part = new AirshipRenderPart(
+                        cell.pos().getX(), cell.pos().getY(), cell.pos().getZ(), model);
+                // See-through blocks are drawn later, after the water (see AirshipLateRender).
+                (isSeeThrough(cell.state()) ? lateParts : parts).add(part);
             }
             // Cushions are entities and cannot be drawn by their own renderer here, so a wool slab of
             // the same colour stands in for them while the ship is in the air.
@@ -59,7 +70,7 @@ public class AirshipEntityRenderer extends EntityRenderer<AirshipEntity, Airship
                 blockModelResolver.update(model, AirshipCushions.standInState(cushion.color()), DISPLAY_CONTEXT);
                 cushions.add(new AirshipRenderCushion(cushion.x(), cushion.y(), cushion.z(), cushion.yaw(), model));
             }
-            cache = new Cache(entity.getCellVersion(), List.copyOf(parts), List.copyOf(cushions));
+            cache = new Cache(entity.getCellVersion(), List.copyOf(parts), List.copyOf(lateParts), List.copyOf(cushions));
             caches.put(entity, cache);
         }
         state.parts = cache.parts();
@@ -75,6 +86,18 @@ public class AirshipEntityRenderer extends EntityRenderer<AirshipEntity, Airship
         state.offsetY = smooth.y - base.y;
         state.offsetZ = smooth.z - base.z;
         state.yaw = entity.getSmoothYaw(partialTick);
+
+        if (!cache.lateParts().isEmpty()) {
+            AirshipLateRender.add(new AirshipLateRender.Entry(smooth, state.yaw, state.lightCoords, cache.lateParts()));
+        }
+    }
+
+    /** Glass, glass panes, ice, slime and honey are drawn with transparency. Matched by name on purpose. */
+    private static boolean isSeeThrough(BlockState state) {
+        String path = BuiltInRegistries.BLOCK.getKey(state.getBlock()).getPath();
+        return path.endsWith("glass") || path.endsWith("glass_pane")
+                || path.equals("ice") || path.equals("frosted_ice")
+                || path.equals("slime_block") || path.equals("honey_block");
     }
 
     @Override
