@@ -8,12 +8,15 @@ A Fabric mod for player-built airships in Minecraft 26.3.
    control block), **Airship Balloons** (1 per 5 blocks of the ship) and optionally **Airship Engines**
    and **cushions** for passengers. Use **Airship Build Blocks** as a separator so the ship does not touch
    the terrain: the structure scan never crosses a build block.
-2. **Check it:** right-click the **Core**. The Core screen shows a checklist (Airship Seat, balloons, size,
+2. **Check and register it:** right-click the **Core**. This also *registers* the ship: the Core saves exactly which
+   blocks belong to it. Blocks you place later are **not** part of the ship until you check the Core again.
+   The Core screen shows a checklist (Airship Seat, balloons, size,
    cushions, engines with fuel) and tells you what is missing. "Neu prüfen" checks again, "Gelände vergessen"
    clears the terrain the Core remembers from the last landing (you normally never need it). Fuel is shown on the
    engine's own screen. If the ship cannot start (no seat, not enough balloons, too big ...), the Core screen opens
    by itself and shows the problem. Nothing is written to the chat. It does not start the ship.
-3. **Fly:** right-click the **Airship Seat** to sit down. The connected structure lifts off and you are the
+3. **Fly:** right-click the **Airship Seat** to sit down. The ship registered by the Core lifts off (a ship that
+   was never checked shows "Nicht registriert" on the Core screen) and you are the
    pilot. Only the Airship Seat steers. The seat has a direction (like a chair, it faces the way you looked when
    you placed it): that is the **front of the ship**. The ship turns so its front points where you look.
    - `W/A/S/D` move relative to where you look
@@ -56,8 +59,9 @@ engines have turbo fuel). Engines without turbo fuel keep using their normal tan
 
 ### Flight display
 
-While you pilot a ship, a small display above the hotbar shows your speed (blocks per second), how many engines are
-pushing, the fuel left in the fullest engine, and, if there is any, the turbo fuel left (as turbo time).
+While you pilot a ship, a small compact display right above your hearts shows your speed (blocks per second), how
+many engines are pushing, the fuel left in the fullest engine (time and bar), and, if there is any, the turbo fuel
+left (as turbo time, marked with T).
 
 Every fuelled engine makes the ship faster (with diminishing returns). Without fuel the ship still flies at its
 base speed. Items that do not fit into the tank anymore stay in the slot and go back to you when you close the screen.

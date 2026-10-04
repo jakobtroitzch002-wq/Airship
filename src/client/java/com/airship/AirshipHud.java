@@ -14,7 +14,7 @@ import net.minecraft.resources.Identifier;
  * while flying (the server sends the numbers a few times per second).
  */
 final class AirshipHud {
-    private static final int WIDTH = 150;
+    private static final int WIDTH = 110;
     private static final int BACKGROUND = 0xE02A1C11;
     private static final int TEXT = 0xFFEADBB5;
     private static final int MUTED = 0xFFB79F6E;
@@ -46,35 +46,40 @@ final class AirshipHud {
         Font font = client.font;
 
         boolean showTurbo = data.turboTicks() > 0 || data.boosting();
-        int height = showTurbo ? 54 : 36;
-        int x = (g.guiWidth() - WIDTH) / 2;
-        int y = g.guiHeight() - 68 - height;
+        int height = showTurbo ? 38 : 27;
+        // Right above the hearts (left edge of the hotbar); one row higher if the armor bar is shown there.
+        int armorLift = client.player.getArmorValue() > 0 ? 10 : 0;
+        int x = g.guiWidth() / 2 - 91;
+        int y = g.guiHeight() - 41 - armorLift - height;
 
         g.fill(x, y, x + WIDTH, y + height, AirshipGuiStyle.BRASS);
         g.fill(x + 1, y + 1, x + WIDTH - 1, y + height - 1, BACKGROUND);
 
         // Speed and engines
         String speed = String.format("%.1f", data.speed()) + " m/s";
-        g.text(font, Component.literal(speed).withStyle(ChatFormatting.BOLD), x + 5, y + 4, TEXT, false);
-        String engines = data.activeEngines() + "/" + data.engines() + " Antriebe";
-        g.text(font, engines, x + WIDTH - 5 - font.width(engines), y + 4, MUTED, false);
+        g.text(font, Component.literal(speed).withStyle(ChatFormatting.BOLD), x + 4, y + 3, TEXT, false);
+        String engines = data.activeEngines() + "/" + data.engines() + " Antr.";
+        g.text(font, engines, x + WIDTH - 4 - font.width(engines), y + 3, MUTED, false);
 
-        // Fuel
-        g.text(font, "Treibstoff", x + 5, y + 16, MUTED, false);
-        String fuel = AirshipFuel.time(data.fuelTicks()) + " Min";
-        g.text(font, Component.literal(fuel).withStyle(ChatFormatting.BOLD),
-                x + WIDTH - 5 - font.width(fuel), y + 16, data.fuelTicks() > 0 ? TEXT : AirshipGuiStyle.BAD, false);
-        bar(g, x + 5, y + 27, WIDTH - 10, (float) data.fuelTicks() / AirshipEngineBlockEntity.MAX_FUEL,
+        int timeX = x + 15;
+        int barX = timeX + font.width("20:00") + 3;
+        int barWidth = x + WIDTH - 4 - barX;
+
+        // Fuel: flame, time left, bar
+        AirshipGuiStyle.flame(g, x + 4, y + 14);
+        g.text(font, Component.literal(AirshipFuel.time(data.fuelTicks())).withStyle(ChatFormatting.BOLD),
+                timeX, y + 15, data.fuelTicks() > 0 ? TEXT : AirshipGuiStyle.BAD, false);
+        bar(g, barX, y + 17, barWidth, (float) data.fuelTicks() / AirshipEngineBlockEntity.MAX_FUEL,
                 AirshipGuiStyle.FLAME);
 
-        // Turbo
+        // Turbo: T, time left (at turbo speed of burning), bar
         if (showTurbo) {
-            String key = AirshipClient.BOOST.getTranslatedKeyMessage().getString();
-            g.text(font, "Turbo [" + key + "]", x + 5, y + 36, data.boosting() ? AirshipGuiStyle.EMBER : MUTED, false);
-            String turbo = AirshipFuel.time(data.turboTicks() / AirshipEntity.TURBO_BURN_RATE) + " Min";
-            g.text(font, Component.literal(turbo).withStyle(ChatFormatting.BOLD),
-                    x + WIDTH - 5 - font.width(turbo), y + 36, TEXT, false);
-            bar(g, x + 5, y + 46, WIDTH - 10, (float) data.turboTicks() / AirshipEngineBlockEntity.MAX_FUEL,
+            g.text(font, Component.literal("T").withStyle(ChatFormatting.BOLD), x + 6, y + 26,
+                    data.boosting() ? AirshipGuiStyle.EMBER : AirshipGuiStyle.TURBO, false);
+            g.text(font, Component.literal(AirshipFuel.time(data.turboTicks() / AirshipEntity.TURBO_BURN_RATE))
+                            .withStyle(ChatFormatting.BOLD),
+                    timeX, y + 26, data.boosting() ? AirshipGuiStyle.EMBER : TEXT, false);
+            bar(g, barX, y + 28, barWidth, (float) data.turboTicks() / AirshipEngineBlockEntity.MAX_FUEL,
                     AirshipGuiStyle.TURBO);
         }
     }

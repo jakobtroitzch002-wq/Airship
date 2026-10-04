@@ -11,7 +11,7 @@ import net.minecraft.network.chat.Component;
 /** The Core screen: a checklist of what the ship has and what it is missing. */
 public class AirshipCoreScreen extends Screen {
     private static final int PANEL_W = 204;
-    private static final int PANEL_H = 186;
+    private static final int PANEL_H = 196;
 
     private AirshipCoreInfoPayload info;
 
@@ -84,6 +84,7 @@ public class AirshipCoreScreen extends Screen {
         row(g, x, rowY, "Antriebe", info.engines() + " verbaut", true, -1.0F);
 
         g.text(font, "Zum Fliegen auf den Steuersitz setzen.", x + 10, y + 172, AirshipGuiStyle.MUTED, false);
+        g.text(font, "Umgebaut? Erst hier prüfen.", x + 10, y + 182, AirshipGuiStyle.MUTED, false);
     }
 
     /** Draws one checklist row and returns the y of the next row. A negative fraction means: no bar. */

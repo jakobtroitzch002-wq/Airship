@@ -60,11 +60,14 @@ public final class AirshipAssembler {
 
     /** Checks the ship around this Core and sends the result to the player (the Core screen shows it). */
     public static void sendInspection(ServerLevel level, BlockPos corePos, ServerPlayer player) {
-        ServerPlayNetworking.send(player, analyze(level, corePos));
+        ServerPlayNetworking.send(player, analyze(level, corePos, true));
     }
 
-    /** Counts what the ship has and what it is missing, without changing anything. */
-    public static AirshipCoreInfoPayload analyze(ServerLevel level, BlockPos corePos) {
+    /**
+     * Scans the structure around the Core and counts what it has and what it is missing. With {@code register}
+     * the found blocks are saved in the Core as the ship (taking off later uses exactly these blocks).
+     */
+    public static AirshipCoreInfoPayload analyze(ServerLevel level, BlockPos corePos, boolean register) {
         Set<BlockPos> ignored = new HashSet<>();
         if (level.getBlockEntity(corePos) instanceof AirshipCoreBlockEntity coreEntity) {
             for (BlockPos relative : coreEntity.getTerrain()) {
@@ -78,7 +81,21 @@ public final class AirshipAssembler {
                     corePos, false, "Zu groß oder berührt das Gelände", max, max, 0, 0, 0, 0, 0, 0, 0);
         }
 
-        Set<BlockPos> blocks = detection.blocks();
+        Set<BlockPos> found = detection.blocks();
+        if (register && level.getBlockEntity(corePos) instanceof AirshipCoreBlockEntity coreEntity) {
+            List<BlockPos> relative = new ArrayList<>(found.size());
+            for (BlockPos pos : found) {
+                relative.add(new BlockPos(
+                        pos.getX() - corePos.getX(), pos.getY() - corePos.getY(), pos.getZ() - corePos.getZ()));
+            }
+            coreEntity.setRegistered(relative);
+        }
+        return describe(level, corePos, found);
+    }
+
+    /** Counts what the given set of ship blocks has and what it is missing, without changing anything. */
+    private static AirshipCoreInfoPayload describe(ServerLevel level, BlockPos corePos, Set<BlockPos> blocks) {
+        int max = AirshipStructureDetector.MAX_BLOCKS;
         AABB area = boundsOf(blocks);
         int cushions = level.getEntitiesOfClass(
                 Entity.class, area, e -> AirshipCushions.isCushion(e) && isAttachedToShip(e, blocks)).size();
@@ -138,29 +155,36 @@ public final class AirshipAssembler {
         if (!(player instanceof ServerPlayer starter)) {
             return InteractionResult.SUCCESS;
         }
-        // Everything that is wrong (no seat, not enough balloons, too big ...) is shown on the Core screen.
-        AirshipCoreInfoPayload info = analyze(serverLevel, corePos);
+        // The ship is what the Core registered when it was checked. Blocks placed since then are not part of
+        // it (they stay where they are) until the Core is checked again.
+        AirshipCoreBlockEntity coreEntity =
+                level.getBlockEntity(corePos) instanceof AirshipCoreBlockEntity c ? c : null;
+        if (coreEntity == null || coreEntity.getRegistered().isEmpty()) {
+            fail(starter, analyze(serverLevel, corePos, false), "Nicht registriert: Kern prüfen");
+            return InteractionResult.SUCCESS;
+        }
+        Set<BlockPos> blocks = new HashSet<>();
+        blocks.add(corePos.immutable());
+        for (BlockPos relative : coreEntity.getRegistered()) {
+            BlockPos pos = corePos.offset(relative);
+            if (!level.hasChunkAt(pos)) {
+                continue;
+            }
+            BlockState state = level.getBlockState(pos);
+            if (state.isAir() || ModBlocks.isAirshipBuildBlock(state.getBlock())) {
+                continue; // a registered block that was removed since
+            }
+            blocks.add(pos.immutable());
+        }
+
+        // Everything that is wrong (no seat, not enough balloons ...) is shown on the Core screen.
+        AirshipCoreInfoPayload info = describe(serverLevel, corePos, blocks);
         if (!info.ready()) {
             ServerPlayNetworking.send(starter, info);
             return InteractionResult.SUCCESS;
         }
-
-        // 2. Scan the ship, skipping terrain that touched it when it last landed.
-        Set<BlockPos> ignored = new HashSet<>();
-        if (level.getBlockEntity(corePos) instanceof AirshipCoreBlockEntity coreEntity) {
-            for (BlockPos relative : coreEntity.getTerrain()) {
-                ignored.add(corePos.offset(relative).immutable());
-            }
-        }
-        AirshipStructureDetector.DetectionResult detection = AirshipStructureDetector.detect(level, startPos, ignored);
-        if (detection.capped()) {
-            fail(starter, info, "Zu groß oder berührt das Gelände");
-            return InteractionResult.SUCCESS;
-        }
-
-        Set<BlockPos> blocks = detection.blocks();
-        if (!blocks.contains(corePos)) {
-            fail(starter, info, "Kern ist nicht mit dem Sitz verbunden");
+        if (!blocks.contains(startPos)) {
+            fail(starter, info, "Sitz nicht registriert: Kern prüfen");
             return InteractionResult.SUCCESS;
         }
 
@@ -370,6 +394,7 @@ public final class AirshipAssembler {
         }
 
         rememberTerrainContacts(level, cells, anchor);
+        registerLanded(level, cells, anchor);
         restoreCushions(level, ship.getCushions(), anchor, snappedYaw(ship.getYRot()));
 
         ship.ejectPassengers();
@@ -400,6 +425,25 @@ public final class AirshipAssembler {
             entity.setPos(world.x, world.y, world.z);
             entity.setYRot(cushion.yaw() + snappedYaw);
             level.addFreshEntity(entity);
+        }
+    }
+
+    /** The landed ship is registered again (its blocks are at new, possibly rotated, positions). */
+    private static void registerLanded(ServerLevel level, List<AirshipCell> cells, BlockPos anchor) {
+        for (AirshipCell core : cells) {
+            if (!core.state().is(ModBlocks.AIRSHIP_CORE)) {
+                continue;
+            }
+            if (level.getBlockEntity(anchor.offset(core.pos())) instanceof AirshipCoreBlockEntity coreEntity) {
+                List<BlockPos> relative = new ArrayList<>(cells.size());
+                for (AirshipCell cell : cells) {
+                    relative.add(new BlockPos(
+                            cell.pos().getX() - core.pos().getX(),
+                            cell.pos().getY() - core.pos().getY(),
+                            cell.pos().getZ() - core.pos().getZ()));
+                }
+                coreEntity.setRegistered(relative);
+            }
         }
     }
 
