@@ -9,11 +9,11 @@ import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 
 /**
- * The engine's screen: one fuel slot plus the player's inventory. Coal and charcoal put into the slot are
- * turned into fuel right away (as long as the engine has room); whatever is left goes back to the player.
+ * The engine's screen: one fuel slot plus the player's inventory. Fuel put into the slot is turned into
+ * running time right away (each fuel gives its own time, as long as the tank has room); whatever is left
+ * goes back to the player.
  */
 public class AirshipEngineMenu extends AbstractContainerMenu {
     private static final int PLAYER_SLOTS = 36;
@@ -62,7 +62,7 @@ public class AirshipEngineMenu extends AbstractContainerMenu {
     }
 
     public static boolean isFuel(ItemStack stack) {
-        return stack.is(Items.COAL) || stack.is(Items.CHARCOAL);
+        return AirshipFuel.isFuel(stack);
     }
 
     /** Remaining fuel of the engine, in ticks of thrust. */
@@ -83,10 +83,19 @@ public class AirshipEngineMenu extends AbstractContainerMenu {
             return;
         }
         ItemStack stack = fuelContainer.getItem(0);
-        while (!stack.isEmpty()
-                && engine.getFuel() + AirshipEngineBlock.FUEL_PER_ITEM <= AirshipEngineBlockEntity.MAX_FUEL) {
-            engine.addFuel(AirshipEngineBlock.FUEL_PER_ITEM);
+        // Burn items one by one as long as they fit into the tank; the rest stays in the slot.
+        while (!stack.isEmpty()) {
+            int burn = AirshipFuel.burnTime(stack);
+            if (burn <= 0 || engine.getFuel() + burn > AirshipEngineBlockEntity.MAX_FUEL) {
+                break;
+            }
+            ItemStack remainder = AirshipFuel.remainder(stack);
+            engine.addFuel(burn);
             stack.shrink(1);
+            if (stack.isEmpty() && !remainder.isEmpty()) {
+                fuelContainer.setItem(0, remainder); // e.g. the empty bucket after lava
+                break;
+            }
         }
     }
 

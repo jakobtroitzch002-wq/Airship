@@ -39,30 +39,38 @@ public class AirshipEngineScreen extends AbstractContainerScreen<AirshipEngineMe
                 x + 23, y + 9, AirshipGuiStyle.TEXT, false);
         g.text(font, "Brennt nur bei Schub", x + 10, y + 22, AirshipGuiStyle.MUTED, false);
 
-        // Fuel slot, arrow and gauge
+        // Fuel slot, arrow
         AirshipGuiStyle.slot(g, x + AirshipEngineLayout.FUEL_X, y + AirshipEngineLayout.FUEL_Y);
-        AirshipGuiStyle.arrow(g, x + 32, y + 41, AirshipGuiStyle.MUTED);
+        AirshipGuiStyle.arrow(g, x + 32, y + 47, AirshipGuiStyle.MUTED);
 
+        // Timer: how long the engine still runs (it only burns while the ship thrusts)
         int fuel = menu.getFuel();
-        int gaugeLeft = x + 48;
-        int gaugeRight = x + imageWidth - 10;
-        g.text(font, "Treibstoff", gaugeLeft, y + 34, AirshipGuiStyle.MUTED, false);
-        String value = AirshipGuiStyle.time(fuel) + " Min";
-        g.text(font, Component.literal(value).withStyle(ChatFormatting.BOLD),
-                gaugeRight - font.width(value), y + 34, AirshipGuiStyle.TEXT, false);
-        AirshipGuiStyle.bar(g, gaugeLeft, y + 46, gaugeRight - gaugeLeft, 8,
+        int left = x + 48;
+        int right = x + imageWidth - 10;
+        g.text(font, "Restlaufzeit", left, y + 32, AirshipGuiStyle.MUTED, false);
+        String max = "von " + AirshipFuel.time(AirshipEngineBlockEntity.MAX_FUEL) + " Min";
+        g.text(font, max, right - font.width(max), y + 32, AirshipGuiStyle.MUTED, false);
+
+        String timer = AirshipFuel.time(fuel);
+        g.pose().pushMatrix();
+        g.pose().translate((float) left, (float) (y + 43));
+        g.pose().scale(2.0F);
+        g.text(font, Component.literal(timer).withStyle(ChatFormatting.BOLD), 0, 0,
+                fuel > 0 ? AirshipGuiStyle.TEXT : AirshipGuiStyle.MUTED, false);
+        g.pose().popMatrix();
+        g.text(font, "Min", left + font.width(timer) * 2 + 4, y + 52, AirshipGuiStyle.MUTED, false);
+
+        AirshipGuiStyle.bar(g, left, y + 64, right - left, 7,
                 (float) fuel / AirshipEngineBlockEntity.MAX_FUEL, AirshipGuiStyle.FLAME);
-        g.text(font, "von " + AirshipGuiStyle.time(AirshipEngineBlockEntity.MAX_FUEL) + " Min",
-                gaugeLeft, y + 57, AirshipGuiStyle.MUTED, false);
 
         // Stat tiles
         int bonus = (int) Math.round(AirshipEntity.ENGINE_BOOST * (1.0 - AirshipEntity.ENGINE_FALLOFF)
                 / AirshipEntity.BASE_SPEED * 100.0);
-        tile(g, x + 10, y + 72, 88, "Tempo-Bonus", "+" + bonus + " %");
-        tile(g, x + 106, y + 72, 88, "Verbrauch", "nur bei Schub");
+        tile(g, x + 10, y + 78, 88, "Tempo-Bonus", "+" + bonus + " %");
+        tile(g, x + 106, y + 78, 88, "Pro Kohle", "+" + AirshipFuel.time(1600) + " Min");
 
         // Inventory
-        g.text(font, "Inventar", x + 10, y + 108, AirshipGuiStyle.TEXT, false);
+        g.text(font, "Inventar", x + 10, y + 113, AirshipGuiStyle.TEXT, false);
         for (int row = 0; row < 3; row++) {
             for (int column = 0; column < 9; column++) {
                 AirshipGuiStyle.slot(g, x + AirshipEngineLayout.INV_X + column * 18,

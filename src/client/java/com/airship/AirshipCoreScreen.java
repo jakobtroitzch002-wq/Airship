@@ -11,7 +11,7 @@ import net.minecraft.network.chat.Component;
 /** The Core screen: a checklist of what the ship has and what it is missing. */
 public class AirshipCoreScreen extends Screen {
     private static final int PANEL_W = 204;
-    private static final int PANEL_H = 192;
+    private static final int PANEL_H = 186;
 
     private AirshipCoreInfoPayload info;
 
@@ -33,11 +33,11 @@ public class AirshipCoreScreen extends Screen {
         int x = (width - PANEL_W) / 2;
         int y = (height - PANEL_H) / 2;
         addRenderableWidget(Button.builder(Component.literal("Neu prüfen"), button -> send(AirshipCoreActionPayload.RECHECK))
-                .pos(x + 10, y + 152)
+                .pos(x + 10, y + 146)
                 .size(92, 20)
                 .build());
         addRenderableWidget(Button.builder(Component.literal("Gelände vergessen"), button -> send(AirshipCoreActionPayload.FORGET_TERRAIN))
-                .pos(x + PANEL_W - 10 - 92, y + 152)
+                .pos(x + PANEL_W - 10 - 92, y + 146)
                 .size(92, 20)
                 .build());
     }
@@ -81,11 +81,9 @@ public class AirshipCoreScreen extends Screen {
         rowY = row(g, x, rowY, "Größe", info.blocks() + " von " + info.maxBlocks() + " Blöcken",
                 info.blocks() < info.maxBlocks(), (float) info.blocks() / info.maxBlocks());
         rowY = row(g, x, rowY, "Sitzkissen", info.cushions() + " Mitfahrer-Plätze", true, -1.0F);
-        float fuel = info.maxFuelTicks() == 0 ? 0.0F : (float) info.fuelTicks() / info.maxFuelTicks();
-        row(g, x, rowY, "Antriebe", info.engines() + " · Treibstoff " + AirshipGuiStyle.time(info.fuelTicks()),
-                true, fuel);
+        row(g, x, rowY, "Antriebe", info.engines() + " verbaut", true, -1.0F);
 
-        g.text(font, "Zum Fliegen auf den Steuersitz setzen.", x + 10, y + 178, AirshipGuiStyle.MUTED, false);
+        g.text(font, "Zum Fliegen auf den Steuersitz setzen.", x + 10, y + 172, AirshipGuiStyle.MUTED, false);
     }
 
     /** Draws one checklist row and returns the y of the next row. A negative fraction means: no bar. */

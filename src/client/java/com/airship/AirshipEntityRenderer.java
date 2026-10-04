@@ -99,7 +99,8 @@ public class AirshipEntityRenderer extends EntityRenderer<AirshipEntity, Airship
             poseStack.pushPose();
             poseStack.translate((float) cushion.x(), (float) cushion.y(), (float) cushion.z());
             poseStack.rotate(Axis.YP, -cushion.yaw() * Mth.DEG_TO_RAD);
-            poseStack.scale(0.75F, 0.5F, 0.75F);
+            // The real cushion is a flat pillow almost one block wide and 0.25 blocks high.
+            poseStack.scale(0.98F, 0.5F, 0.98F);
             poseStack.translate(-0.5F, 0.0F, -0.5F);
             cushion.model().submit(poseStack, collector, state.lightCoords, OverlayTexture.NO_OVERLAY, 0);
             poseStack.popPose();

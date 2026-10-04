@@ -10,7 +10,7 @@ A Fabric mod for player-built airships in Minecraft 26.3.
    the terrain: the structure scan never crosses a build block.
 2. **Check it:** right-click the **Core**. The Core screen shows a checklist (Airship Seat, balloons, size,
    cushions, engines with fuel) and tells you what is missing. "Neu prüfen" checks again, "Gelände vergessen"
-   clears the terrain the Core remembers from the last landing. It does not start the ship.
+   clears the terrain the Core remembers from the last landing. (Fuel is shown on the engine's own screen.) It does not start the ship.
 3. **Fly:** right-click the **Airship Seat** to sit down. The connected structure lifts off and you are the
    pilot. Only the Airship Seat steers. The seat has a direction (like a chair, it faces the way you looked when
    you placed it): that is the **front of the ship**. The ship turns so its front points where you look.
@@ -30,15 +30,30 @@ remembered yet: if the ship touches the ground, separate it with **Airship Build
 
 ## Engines
 
-Right-click an Airship Engine with an empty hand to open its screen: put coal or charcoal into the fuel slot
-(or right-click the engine holding coal). Every fuelled engine burns fuel while the pilot is thrusting and makes
-the ship faster (with diminishing returns). Without fuel the ship still flies at its base speed.
+Right-click an Airship Engine with an empty hand to open its screen. Put fuel into the fuel slot (or right-click
+the engine holding fuel). The big timer shows how long the engine still runs; it only counts down while the
+pilot is thrusting, so it stays put while the ship hovers or is landed. The tank holds 20:00 minutes.
+
+| Fuel | Time per item |
+| --- | --- |
+| Coal, charcoal | 1:20 |
+| Lava bucket | 20:00 (needs an empty tank, you get the empty bucket back) |
+| Coal block | 13:20 |
+| Blaze rod | 2:00 |
+| Planks, logs | 0:15 |
+| Stick | 0:05 |
+| Bamboo | 0:02 |
+
+Every fuelled engine makes the ship faster (with diminishing returns). Without fuel the ship still flies at its
+base speed. Items that do not fit into the tank anymore stay in the slot and go back to you when you close the screen.
 
 ## Look
 
 Blocks and screens use the "Messing & Dampf" design: walnut and brass compass (Core), canvas with rope net
 (Balloon), copper boiler (Engine). The block textures are in `assets/airship/textures/block/`
-(`airship_<block>_top.png` and `airship_<block>_side.png`, 16x16).
+(`airship_<block>_top.png` and `airship_<block>_side.png`, 16x16). The Airship Seat (walnut, tufted leather,
+brass studs) and the Airship Build Block (brass and walnut frame, riveted copper panels, brass compass plates)
+use the same style.
 
 ## Cushions (Sitzkissen)
 

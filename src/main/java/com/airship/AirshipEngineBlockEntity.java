@@ -14,7 +14,8 @@ import net.minecraft.world.level.storage.ValueOutput;
 
 /** Stores the remaining fuel (in ticks of thrust) of one engine block. */
 public class AirshipEngineBlockEntity extends BlockEntity implements MenuProvider {
-    public static final int MAX_FUEL = 1600 * 8;
+    /** Tank size in ticks: 20 minutes (a coal block alone is 13:20). Also fits in the 16-bit menu data. */
+    public static final int MAX_FUEL = 24000;
 
     private int fuel;
 

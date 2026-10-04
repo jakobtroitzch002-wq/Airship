@@ -7,7 +7,6 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
@@ -16,13 +15,11 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 
 /**
- * Engine block. Right-click with coal or charcoal to fuel it. While an airship flies,
- * every fuelled engine burns fuel as long as the pilot is thrusting and makes the ship faster.
+ * Engine block. Right-click with a fuel (coal, charcoal, coal block, blaze rod, wood ...) to fuel it, or with
+ * an empty hand to open its screen. While an airship flies, every fuelled engine burns fuel as long as the
+ * pilot is thrusting and makes the ship faster.
  */
 public class AirshipEngineBlock extends Block implements EntityBlock {
-    /** Thrust ticks gained per piece of coal / charcoal (same as burning time in a furnace). */
-    public static final int FUEL_PER_ITEM = 1600;
-
     public AirshipEngineBlock(Properties properties) {
         super(properties);
     }
@@ -42,24 +39,32 @@ public class AirshipEngineBlock extends Block implements EntityBlock {
             InteractionHand hand,
             BlockHitResult hitResult
     ) {
-        if (!(itemStack.is(Items.COAL) || itemStack.is(Items.CHARCOAL))) {
-            return InteractionResult.PASS;
+        int burn = AirshipFuel.burnTime(itemStack);
+        if (burn <= 0) {
+            // Not a fuel: let the click fall through to the empty-hand action (opening the screen).
+            return InteractionResult.TRY_WITH_EMPTY_HAND;
         }
         if (level.isClientSide()) {
             return InteractionResult.SUCCESS;
         }
         if (!(level.getBlockEntity(pos) instanceof AirshipEngineBlockEntity engine)) {
-            return InteractionResult.PASS;
+            return InteractionResult.TRY_WITH_EMPTY_HAND;
         }
-        if (engine.getFuel() + FUEL_PER_ITEM > AirshipEngineBlockEntity.MAX_FUEL) {
-            player.sendSystemMessage(Component.literal("Engine is full"));
+        if (engine.getFuel() + burn > AirshipEngineBlockEntity.MAX_FUEL) {
+            player.sendSystemMessage(Component.literal("Antrieb: Tank voll ("
+                    + AirshipFuel.time(engine.getFuel()) + " Min)"));
             return InteractionResult.SUCCESS;
         }
-        engine.addFuel(FUEL_PER_ITEM);
+        ItemStack remainder = AirshipFuel.remainder(itemStack);
+        engine.addFuel(burn);
         if (!player.isCreative()) {
             itemStack.shrink(1);
+            if (itemStack.isEmpty() && !remainder.isEmpty()) {
+                player.setItemInHand(hand, remainder);
+            }
         }
-        player.sendSystemMessage(Component.literal("Engine fuel: " + describe(engine.getFuel())));
+        player.sendSystemMessage(Component.literal("Antrieb: " + AirshipFuel.time(engine.getFuel())
+                + " Min Laufzeit (+" + AirshipFuel.time(burn) + ")"));
         return InteractionResult.SUCCESS;
     }
 
@@ -81,7 +86,4 @@ public class AirshipEngineBlock extends Block implements EntityBlock {
         return InteractionResult.SUCCESS;
     }
 
-    private static String describe(int fuelTicks) {
-        return (fuelTicks / 20) + "s of thrust";
-    }
 }
