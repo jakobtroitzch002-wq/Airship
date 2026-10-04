@@ -69,5 +69,7 @@ Cushions (new in 26.3) are entities that players can sit on. On a ship they are 
 - While flying, the ship's blocks are not world blocks: sit in your seat. Landing needs free space
   around the ship (build blocks count as obstacles when landing).
 - Blocks with special rendering (chests, signs, ...) are shown with their plain block model while flying.
-- See-through blocks of the ship (glass, glass panes, ice, slime, honey) are drawn in a later render stage, after
-  the water, so water behind them stays visible while the ship flies.
+- See-through blocks of the ship (glass, glass panes, ice, slime, honey) are drawn in a phase after the terrain, so
+  they cannot cut away the water behind them (Minecraft draws entities before water, and glass drawn with an
+  entity also writes depth). Key `F8` (rebindable, "Airship: toggle glass mode") switches back to drawing them with
+  the rest of the ship, to compare or if the glass does not show up.

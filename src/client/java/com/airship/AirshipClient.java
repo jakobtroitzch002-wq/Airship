@@ -12,6 +12,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.Options;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
 
 public final class AirshipClient implements ClientModInitializer {
@@ -27,6 +28,15 @@ public final class AirshipClient implements ClientModInitializer {
             )
     );
 
+    /** Switches how see-through blocks of a flying ship are drawn (for comparing, see AirshipRenderMode). */
+    private static final KeyMapping GLASS_MODE = KeyMappingHelper.registerKeyMapping(
+            new KeyMapping(
+                    "key.airship.glass_mode",
+                    InputConstants.KEY_F8,
+                    KeyMapping.Category.MISC
+            )
+    );
+
     private static int lastSentFlags = -1;
     private static int tickCounter;
 
@@ -34,7 +44,7 @@ public final class AirshipClient implements ClientModInitializer {
     public void onInitializeClient() {
         BlockEntityRenderers.register(ModBlockEntities.AIRSHIP_BUILD, AirshipBuildBlockRenderer::new);
         EntityRendererRegistry.register(ModEntities.AIRSHIP, AirshipEntityRenderer::new);
-        AirshipLateRender.register();
+        AirshipGlassFeature.register();
 
         // Engine screen (a container menu) and Core screen (opened by the server's check result).
         MenuScreens.register(ModMenus.ENGINE, AirshipEngineScreen::new);
@@ -81,6 +91,17 @@ public final class AirshipClient implements ClientModInitializer {
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             AirshipPendingCells.clear();
             lastSentFlags = -1;
+        });
+
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            while (GLASS_MODE.consumeClick()) {
+                AirshipRenderMode.afterTerrain = !AirshipRenderMode.afterTerrain;
+                if (client.player != null) {
+                    client.player.sendOverlayMessage(Component.literal(AirshipRenderMode.afterTerrain
+                            ? "Glas-Modus: nach dem Wasser gezeichnet"
+                            : "Glas-Modus: normal gezeichnet"));
+                }
+            }
         });
 
         // While sitting in an airship, report the movement keys to the server.

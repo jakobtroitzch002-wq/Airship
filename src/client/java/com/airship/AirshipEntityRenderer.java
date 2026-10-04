@@ -6,9 +6,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
+import net.fabricmc.fabric.api.client.rendering.v1.SubmitRenderPhases;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.block.BlockModelRenderState;
 import net.minecraft.client.renderer.block.BlockModelResolver;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
 import net.minecraft.client.renderer.block.model.BlockDisplayContext;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
@@ -16,6 +20,7 @@ import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
@@ -57,10 +62,11 @@ public class AirshipEntityRenderer extends EntityRenderer<AirshipEntity, Airship
             for (AirshipClientCell cell : entity.getExposedCells()) {
                 BlockModelRenderState model = new BlockModelRenderState();
                 blockModelResolver.update(model, cell.state(), DISPLAY_CONTEXT);
+                boolean seeThrough = isSeeThrough(cell.state());
                 AirshipRenderPart part = new AirshipRenderPart(
-                        cell.pos().getX(), cell.pos().getY(), cell.pos().getZ(), model);
-                // See-through blocks are drawn later, after the water (see AirshipLateRender).
-                (isSeeThrough(cell.state()) ? lateParts : parts).add(part);
+                        cell.pos().getX(), cell.pos().getY(), cell.pos().getZ(), model,
+                        seeThrough ? modelParts(cell.state()) : List.of());
+                (seeThrough ? lateParts : parts).add(part);
             }
             // Cushions are entities and cannot be drawn by their own renderer here, so a wool slab of
             // the same colour stands in for them while the ship is in the air.
@@ -74,6 +80,7 @@ public class AirshipEntityRenderer extends EntityRenderer<AirshipEntity, Airship
             caches.put(entity, cache);
         }
         state.parts = cache.parts();
+        state.lateParts = cache.lateParts();
         state.cushions = cache.cushions();
 
         // The base renderer already placed us at the entity's own interpolated position (between the
@@ -86,10 +93,13 @@ public class AirshipEntityRenderer extends EntityRenderer<AirshipEntity, Airship
         state.offsetY = smooth.y - base.y;
         state.offsetZ = smooth.z - base.z;
         state.yaw = entity.getSmoothYaw(partialTick);
+    }
 
-        if (!cache.lateParts().isEmpty()) {
-            AirshipLateRender.add(new AirshipLateRender.Entry(smooth, state.yaw, state.lightCoords, cache.lateParts()));
-        }
+    private static List<BlockStateModelPart> modelParts(BlockState state) {
+        BlockStateModel model = Minecraft.getInstance().getModelManager().getBlockStateModelSet().get(state);
+        List<BlockStateModelPart> parts = new ArrayList<>();
+        model.collectParts(RandomSource.create(42L), parts);
+        return List.copyOf(parts);
     }
 
     /** Glass, glass panes, ice, slime and honey are drawn with transparency. Matched by name on purpose. */
@@ -116,6 +126,17 @@ public class AirshipEntityRenderer extends EntityRenderer<AirshipEntity, Airship
             // The entity position is the centre of the Core block's footprint.
             poseStack.translate(part.x() - 0.5F, part.y(), part.z() - 0.5F);
             part.model().submit(poseStack, collector, state.lightCoords, OverlayTexture.NO_OVERLAY, 0);
+            poseStack.popPose();
+        }
+        for (AirshipRenderPart part : state.lateParts) {
+            poseStack.pushPose();
+            poseStack.translate(part.x() - 0.5F, part.y(), part.z() - 0.5F);
+            if (AirshipRenderMode.afterTerrain) {
+                collector.submitCustom(SubmitRenderPhases.AFTER_TERRAIN,
+                        new AirshipGlassFeature.GlassSubmit(poseStack.last().copy(), part.modelParts(), state.lightCoords));
+            } else {
+                part.model().submit(poseStack, collector, state.lightCoords, OverlayTexture.NO_OVERLAY, 0);
+            }
             poseStack.popPose();
         }
         for (AirshipRenderCushion cushion : state.cushions) {
