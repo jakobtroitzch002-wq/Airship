@@ -407,13 +407,24 @@ public final class AirshipAssembler {
         return BlockPos.containing(Math.round(pos.x - 0.5), Math.round(pos.y), Math.round(pos.z - 0.5));
     }
 
+    /**
+     * Where the ship lands: its origin after snapping to 90 degrees, turning around the pilot's seat
+     * (so the seat stays where it is while the rest of the ship swings into the grid).
+     */
+    public static BlockPos landingAnchor(AirshipEntity ship) {
+        Vec3 pivot = ship.getPivot();
+        Vec3 shift = AirshipEntity.rotateLocal(pivot, ship.getYRot())
+                .subtract(AirshipEntity.rotateLocal(pivot, snappedYaw(ship.getYRot())));
+        return snappedAnchor(ship.position().add(shift));
+    }
+
     /** The ship's yaw rounded to the nearest multiple of 90 degrees. */
     public static float snappedYaw(float yaw) {
         return Math.round(yaw / 90.0F) * 90.0F;
     }
 
     private static BlockPos findLandingAnchor(ServerLevel level, AirshipEntity ship, List<AirshipCell> cells) {
-        BlockPos base = snappedAnchor(ship.position());
+        BlockPos base = landingAnchor(ship);
         for (int[] offset : LANDING_OFFSETS) {
             BlockPos anchor = base.offset(offset[0], offset[1], offset[2]);
             if (fits(level, cells, anchor)) {

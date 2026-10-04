@@ -314,6 +314,20 @@ public class AirshipEntity extends Entity {
 
     // ------------------------------------------------------------------ seats
 
+    /** The point the ship turns around: the first seat (the pilot's), so the pilot does not swing around. */
+    public Vec3 getPivot() {
+        if (seats.isEmpty()) {
+            return Vec3.ZERO;
+        }
+        Vec3 seat = seats.get(0);
+        return new Vec3(seat.x, 0.0, seat.z);
+    }
+
+    /** A point of the ship (relative to its origin) rotated by the ship's yaw, in degrees. */
+    public static Vec3 rotateLocal(Vec3 local, float yawDegrees) {
+        return local.yRot((float) -Math.toRadians(yawDegrees));
+    }
+
     private Vec3 toWorldOffset(Vec3 local) {
         return local.yRot((float) -Math.toRadians(getYRot()));
     }
@@ -339,7 +353,7 @@ public class AirshipEntity extends Entity {
         }
         // The ship lands as soon as the last passenger leaves, snapped to the block grid and to 90 degrees.
         // Put the player on top of the seat block that will be placed there.
-        BlockPos anchor = AirshipAssembler.snappedAnchor(position());
+        BlockPos anchor = AirshipAssembler.landingAnchor(this);
         Vec3 anchorPos = new Vec3(anchor.getX() + 0.5, anchor.getY(), anchor.getZ() + 0.5);
         double snappedRad = -Math.toRadians(AirshipAssembler.snappedYaw(getYRot()));
 
@@ -540,7 +554,13 @@ public class AirshipEntity extends Entity {
             float step = Mth.clamp(diff, -MAX_TURN, MAX_TURN);
             if (Math.abs(step) > 1.0E-3F) {
                 float newYaw = Mth.wrapDegrees(getYRot() + step);
-                if (!AirshipCollision.collides(level, this, position(), newYaw)) {
+                // Turn around the pilot's seat, not the Core: otherwise the pilot's camera swings around
+                // the Core on a circle every time the ship turns, which looks like violent shaking.
+                Vec3 pivot = getPivot();
+                Vec3 shift = rotateLocal(pivot, getYRot()).subtract(rotateLocal(pivot, newYaw));
+                Vec3 newPos = position().add(shift);
+                if (!AirshipCollision.collides(level, this, newPos, newYaw)) {
+                    setPos(newPos.x, newPos.y, newPos.z);
                     setYRot(newYaw);
                 }
             }
