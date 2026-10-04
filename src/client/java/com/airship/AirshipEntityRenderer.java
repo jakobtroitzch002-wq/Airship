@@ -65,9 +65,12 @@ public class AirshipEntityRenderer extends EntityRenderer<AirshipEntity, Airship
         state.parts = cache.parts();
         state.cushions = cache.cushions();
 
-        // Blend between the last two tick positions so the ship moves smoothly.
+        // The base renderer already placed us at the entity's own interpolated position (between the
+        // positions of the last two ticks). Move from there to our smoothed position. It is important
+        // to subtract exactly what the base renderer used (getPosition(partialTick)), not the current
+        // position, otherwise the interpolation is applied twice and the ship jumps back every tick.
         Vec3 smooth = entity.getSmoothPos(partialTick);
-        Vec3 base = entity.position();
+        Vec3 base = entity.getPosition(partialTick);
         state.offsetX = smooth.x - base.x;
         state.offsetY = smooth.y - base.y;
         state.offsetZ = smooth.z - base.z;
