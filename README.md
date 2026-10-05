@@ -88,10 +88,12 @@ The ship's blocks are not world blocks while it flies, so anything standing on i
 ship **does not take off while a mob, an item, an item frame or a painting is on board** (the Core screen shows
 "Tiere/Items an Bord: N"). Players and cushions are fine.
 
-To take mobs along, **leash them to a fence that belongs to the ship** (use a lead on the fence as usual) before
-takeoff. At takeoff those mobs get on board and ride along where they stand (the ship has no floor for them, so they
-cannot simply stand on it). Their leashes are released and the **leads go back to your inventory**. When the ship
-lands, the mobs are put down where they were carried. A short text above the hotbar tells you how many mobs came along.
+To take mobs along, **leash them to a fence that belongs to the ship** (the fence must be registered: check the
+Core after building it). At takeoff those mobs get on board and ride along where they stand (the ship has no floor
+for them), and their leash is tied to the ship, so the rope stays visible. When the ship lands, the mobs are put down
+where they were carried and leashed to a fence of the landed ship again. A short text above the hotbar tells you what
+was found ("Leinen: n Knoten, m Tiere, ..."); the Core screen has a row "Leinen" with the fences, knots and leashed
+mobs it sees.
 
 ## Cushions (Sitzkissen)
 

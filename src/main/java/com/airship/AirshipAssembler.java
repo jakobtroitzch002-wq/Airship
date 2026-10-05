@@ -27,6 +27,7 @@ import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.decoration.LeashFenceKnotEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -83,7 +84,7 @@ public final class AirshipAssembler {
         int max = AirshipStructureDetector.MAX_BLOCKS;
         if (detection.capped()) {
             return new AirshipCoreInfoPayload(
-                    corePos, false, "Zu groß oder berührt das Gelände", max, max, 0, 0, 0, 0, 0, 0, 0);
+                    corePos, false, "Zu groß oder berührt das Gelände", max, max, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         }
 
         Set<BlockPos> found = detection.blocks();
@@ -109,8 +110,12 @@ public final class AirshipAssembler {
         int seats = 0;
         int engines = 0;
         int fuel = 0;
+        int fences = 0;
         for (BlockPos pos : blocks) {
             BlockState state = level.getBlockState(pos);
+            if (state.is(BlockTags.FENCES)) {
+                fences++;
+            }
             if (state.is(ModBlocks.AIRSHIP_BALLOON)) {
                 balloons++;
             } else if (state.is(ModBlocks.AIRSHIP_SEAT)) {
@@ -140,7 +145,8 @@ public final class AirshipAssembler {
         }
         return new AirshipCoreInfoPayload(
                 corePos, problem.isEmpty(), problem, blocks.size(), max, balloons, required, seats, cushions,
-                engines, fuel, engines * AirshipEngineBlockEntity.MAX_FUEL);
+                engines, fuel, engines * AirshipEngineBlockEntity.MAX_FUEL,
+                fences, shipKnots(level, area, blocks).size(), shipLeashedMobs(level, area, blocks).size());
     }
 
     /**
@@ -204,13 +210,15 @@ public final class AirshipAssembler {
         List<Entity> cushionEntities = serverLevel.getEntitiesOfClass(
                 Entity.class, area, e -> AirshipCushions.isCushion(e) && isAttachedToShip(e, blocks));
 
-        // Leash knots on the ship's fences come along: the mobs on them are re-leashed to the ship itself.
-        List<Entity> knots = serverLevel.getEntitiesOfClass(
-                Entity.class, area, e -> isLeashKnot(e) && blocks.contains(e.blockPosition()));
-        List<Mob> leashedMobs = new ArrayList<>();
-        for (Entity knot : knots) {
-            leashedMobs.addAll(serverLevel.getEntitiesOfClass(
-                    Mob.class, new AABB(knot.blockPosition()).inflate(32.0), m -> m.getLeashHolder() == knot));
+        // Leashed mobs: found by what their leash is tied to (a knot on a fence of the ship), not by comparing
+        // objects. The knots are removed after the mobs are taken care of.
+        List<Mob> leashedMobs = shipLeashedMobs(serverLevel, area, blocks);
+        List<Entity> knots = new ArrayList<>(shipKnots(serverLevel, area, blocks));
+        for (Mob mob : leashedMobs) {
+            Entity holder = mob.getLeashHolder();
+            if (holder != null && !knots.contains(holder)) {
+                knots.add(holder);
+            }
         }
 
         int balloons = 0;
@@ -369,21 +377,25 @@ public final class AirshipAssembler {
         ship.setCushions(cushions);
         ship.setSeatOrder(seatOrder);
         serverLevel.addFreshEntity(ship);
-        // The leashed mobs get on board first. Their leashes are not moved to the ship (that made them get off
-        // again): the knots are removed and Minecraft releases the leashes the normal way. The ship gives the leads
-        // back to the pilot.
+        // Leashed mobs: the leash is tied to the ship (so the rope stays visible) and the mob rides along where it
+        // stands (the ship has no floor for it). The knots on the fences are removed.
         int riding = 0;
+        int stillLeashed = 0;
         for (Mob mob : leashedMobs) {
+            mob.setLeashedTo(ship, true);
             if (mob.startRiding(ship, true, true)) {
                 riding++;
+            }
+            if (mob.getLeashHolder() == ship) {
+                stillLeashed++;
             }
         }
         for (Entity knot : knots) {
             knot.discard();
         }
-        if (!leashedMobs.isEmpty()) {
-            ship.recoverLeads();
-            tell(starter, "Tiere mitgenommen: " + riding + " von " + leashedMobs.size());
+        if (!leashedMobs.isEmpty() || !knots.isEmpty()) {
+            tell(starter, "Leinen: " + knots.size() + " Knoten, " + leashedMobs.size() + " Tiere, "
+                    + riding + " fahren mit, " + stillLeashed + " angeleint");
         }
 
         Map<Integer, Integer> assignment = new HashMap<>();
@@ -443,6 +455,8 @@ public final class AirshipAssembler {
         registerLanded(level, cells, anchor);
         restoreCushions(level, ship.getCushions(), anchor, snappedYaw(ship.getYRot()));
 
+        restoreLeashes(level, ship, cells, anchor);
+
         ship.ejectPassengers();
         ship.discard();
         return true;
@@ -454,6 +468,27 @@ public final class AirshipAssembler {
 
     private static boolean isLeashKnot(Entity entity) {
         return entityName(entity).equals("leash_knot");
+    }
+
+    /** A leash knot on a block of the ship (or just above one, in case the knot sits a little high). */
+    private static boolean knotOnShip(Entity entity, Set<BlockPos> blocks) {
+        if (!isLeashKnot(entity)) {
+            return false;
+        }
+        BlockPos position = entity.blockPosition();
+        return blocks.contains(position) || blocks.contains(position.below());
+    }
+
+    private static List<Entity> shipKnots(ServerLevel level, AABB area, Set<BlockPos> blocks) {
+        return level.getEntitiesOfClass(Entity.class, area, e -> knotOnShip(e, blocks));
+    }
+
+    /** Mobs (anywhere near the ship) whose leash is tied to a knot on a fence of the ship. */
+    private static List<Mob> shipLeashedMobs(ServerLevel level, AABB area, Set<BlockPos> blocks) {
+        return level.getEntitiesOfClass(Mob.class, area.inflate(24.0), mob -> {
+            Entity holder = mob.getLeashHolder();
+            return holder != null && knotOnShip(holder, blocks);
+        });
     }
 
     /**
@@ -474,12 +509,40 @@ public final class AirshipAssembler {
             }
             if (entity instanceof Mob mob) {
                 Entity holder = mob.getLeashHolder();
-                if (holder != null && isLeashKnot(holder) && blocks.contains(holder.blockPosition())) {
+                if (holder != null && knotOnShip(holder, blocks)) {
                     return false; // leashed to a fence of the ship: comes along
                 }
             }
             return true;
         });
+    }
+
+    /** After landing, mobs leashed to the ship are tied to a knot on a fence of the landed ship again. */
+    private static void restoreLeashes(ServerLevel level, AirshipEntity ship, List<AirshipCell> cells, BlockPos anchor) {
+        List<Mob> mobs = level.getEntitiesOfClass(
+                Mob.class, new AABB(ship.blockPosition()).inflate(48.0), m -> m.getLeashHolder() == ship);
+        if (mobs.isEmpty()) {
+            return;
+        }
+        BlockPos fence = null;
+        double best = Double.MAX_VALUE;
+        for (AirshipCell cell : cells) {
+            if (cell.state().is(BlockTags.FENCES)) {
+                double distance = cell.pos().distSqr(BlockPos.ZERO);
+                if (distance < best) {
+                    best = distance;
+                    fence = anchor.offset(cell.pos());
+                }
+            }
+        }
+        if (fence == null) {
+            return; // no fence left: the leashes simply break when the ship goes away
+        }
+        Entity knot = LeashFenceKnotEntity.getOrCreateKnot(level, fence);
+        for (Mob mob : mobs) {
+            mob.setLeashedTo(knot, true);
+            mob.resetFallDistance();
+        }
     }
 
     private static boolean isAttachedToShip(Entity entity, Set<BlockPos> blocks) {
@@ -695,6 +758,7 @@ public final class AirshipAssembler {
     private static void fail(ServerPlayer player, AirshipCoreInfoPayload base, String problem) {
         ServerPlayNetworking.send(player, new AirshipCoreInfoPayload(
                 base.pos(), false, problem, base.blocks(), base.maxBlocks(), base.balloons(), base.balloonsRequired(),
-                base.seatBlocks(), base.cushions(), base.engines(), base.fuelTicks(), base.maxFuelTicks()));
+                base.seatBlocks(), base.cushions(), base.engines(), base.fuelTicks(), base.maxFuelTicks(),
+                base.fences(), base.knots(), base.leashed()));
     }
 }
