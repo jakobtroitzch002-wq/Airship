@@ -44,19 +44,6 @@ public class AirshipBuildBlock extends BaseEntityBlock {
         builder.add(HAS_TEXTURE);
     }
 
-    /**
-     * Break effect (particles and sound). A build block that shows another block breaks like that block, so the
-     * particles match what you see.
-     */
-    @Override
-    public void spawnDestroyParticles(Level level, Player player, BlockPos pos, BlockState state) {
-        BlockState shown = state;
-        if (level.getBlockEntity(pos) instanceof AirshipBuildBlockEntity buildEntity && buildEntity.hasCustomTexture()) {
-            shown = buildEntity.getDisplayState();
-        }
-        level.levelEvent(player, 2001, pos, Block.getId(shown));
-    }
-
     @Override
     protected float getDestroyProgress(BlockState state, Player player, BlockGetter level, BlockPos pos) {
         float destroySpeed = state.getDestroySpeed(level, pos);
