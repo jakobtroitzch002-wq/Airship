@@ -87,12 +87,12 @@ public class AirshipEngineMenu extends AbstractContainerMenu {
 
     /** Remaining fuel of the normal tank, in ticks of thrust. */
     public int getFuel() {
-        return data.get(0);
+        return data.get(0) * 20;
     }
 
     /** Remaining fuel of the turbo tank (it burns {@link AirshipEntity#TURBO_BURN_RATE} times as fast). */
     public int getTurbo() {
-        return data.get(1);
+        return data.get(1) * 20;
     }
 
     @Override
@@ -114,7 +114,8 @@ public class AirshipEngineMenu extends AbstractContainerMenu {
         while (!stack.isEmpty()) {
             int burn = AirshipFuel.burnTime(stack);
             int current = turbo ? engine.getTurbo() : engine.getFuel();
-            if (burn <= 0 || current + burn > AirshipEngineBlockEntity.MAX_FUEL) {
+            int limit = turbo ? AirshipEngineBlockEntity.MAX_TURBO : AirshipEngineBlockEntity.MAX_FUEL;
+            if (burn <= 0 || current + burn > limit) {
                 break;
             }
             ItemStack remainder = AirshipFuel.remainder(stack);

@@ -71,18 +71,16 @@ public class AirshipEngineScreen extends AbstractContainerScreen<AirshipEngineMe
                 AirshipGuiStyle.TURBO, false);
         String burn = AirshipEntity.TURBO_BURN_RATE + "x Verbrauch";
         g.text(font, burn, right - font.width(burn), y + 76, AirshipGuiStyle.MUTED, false);
-        // The turbo tank holds as much as the normal one but runs out TURBO_BURN_RATE times sooner.
+        // The turbo tank is shown as the time of turbo it gives (its fuel burns TURBO_BURN_RATE times as fast).
         String turboTime = AirshipFuel.time(turbo / AirshipEntity.TURBO_BURN_RATE);
         g.text(font, Component.literal(turboTime + " Min Turbo").withStyle(ChatFormatting.BOLD), left, y + 86,
                 turbo > 0 ? AirshipGuiStyle.TEXT : AirshipGuiStyle.MUTED, false);
         AirshipGuiStyle.bar(g, left, y + 97, right - left, 7,
-                (float) turbo / AirshipEngineBlockEntity.MAX_FUEL, AirshipGuiStyle.TURBO);
+                (float) turbo / AirshipEngineBlockEntity.MAX_TURBO, AirshipGuiStyle.TURBO);
 
         // Stat tiles
-        int bonus = (int) Math.round(AirshipEntity.ENGINE_BOOST * (1.0 - AirshipEntity.ENGINE_FALLOFF)
-                / AirshipEntity.BASE_SPEED * 100.0);
-        tile(g, x + 10, y + 110, 88, "Tempo-Bonus", "+" + bonus + " %");
-        tile(g, x + 106, y + 110, 88, "Turbo-Tempo", "x" + String.format("%.1f", AirshipEntity.TURBO_SPEED_MULTIPLIER));
+        tile(g, x + 10, y + 110, 88, "Treibstoff", speedText(AirshipEntity.FUEL_SPEED));
+        tile(g, x + 106, y + 110, 88, "Turbo", speedText(AirshipEntity.TURBO_SPEED));
 
         // Inventory
         g.text(font, "Inventar", x + 10, y + 142, AirshipGuiStyle.TEXT, false);
@@ -96,6 +94,14 @@ public class AirshipEngineScreen extends AbstractContainerScreen<AirshipEngineMe
             AirshipGuiStyle.slot(g, x + AirshipEngineLayout.INV_X + column * 18,
                     y + AirshipEngineLayout.INV_Y + 58);
         }
+    }
+
+    /** Speed per tick as "5 b/s" (blocks per second). */
+    private static String speedText(double perTick) {
+        double perSecond = perTick * 20.0;
+        String number = perSecond == Math.floor(perSecond) ? String.valueOf((int) perSecond)
+                : String.format("%.1f", perSecond);
+        return number + " b/s";
     }
 
     private void tile(GuiGraphicsExtractor g, int x, int y, int w, String label, String value) {

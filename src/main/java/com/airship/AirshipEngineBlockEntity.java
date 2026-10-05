@@ -14,17 +14,20 @@ import net.minecraft.world.level.storage.ValueOutput;
 
 /** Stores the remaining fuel (in ticks of thrust) of one engine block. */
 public class AirshipEngineBlockEntity extends BlockEntity implements MenuProvider {
-    /** Tank size in ticks: 20 minutes (a coal block alone is 13:20). Also fits in the 16-bit menu data. */
-    public static final int MAX_FUEL = 24000;
+    /** Normal tank size in ticks: 1 hour of thrust. */
+    public static final int MAX_FUEL = 72000;
+    /** Turbo tank size in ticks: it burns 5x as fast, so this lasts 10 minutes of turbo. */
+    public static final int MAX_TURBO = 60000;
 
     private int fuel;
     private int turbo;
 
     /** Lets the menu read the fuel; the menu never writes it through this. */
     private final ContainerData fuelData = new ContainerData() {
+        /** Sent in seconds: the menu data is only 16 bits wide, 1 hour in ticks (72000) would not fit. */
         @Override
         public int get(int index) {
-            return index == 0 ? fuel : turbo;
+            return (index == 0 ? fuel : turbo) / 20;
         }
 
         @Override
@@ -60,7 +63,7 @@ public class AirshipEngineBlockEntity extends BlockEntity implements MenuProvide
     }
 
     public void setTurbo(int turbo) {
-        this.turbo = Math.max(0, Math.min(MAX_FUEL, turbo));
+        this.turbo = Math.max(0, Math.min(MAX_TURBO, turbo));
         setChanged();
     }
 

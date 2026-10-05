@@ -56,7 +56,7 @@ final class AirshipHud {
         g.fill(x + 1, y + 1, x + WIDTH - 1, y + height - 1, BACKGROUND);
 
         // Speed and engines
-        String speed = String.format("%.1f", data.speed()) + " m/s";
+        String speed = String.format("%.1f", data.speed()) + " b/s";
         g.text(font, Component.literal(speed).withStyle(ChatFormatting.BOLD), x + 4, y + 3, TEXT, false);
         String engines = data.activeEngines() + "/" + data.engines() + " Antr.";
         g.text(font, engines, x + WIDTH - 4 - font.width(engines), y + 3, MUTED, false);
@@ -79,7 +79,7 @@ final class AirshipHud {
             g.text(font, Component.literal(AirshipFuel.time(data.turboTicks() / AirshipEntity.TURBO_BURN_RATE))
                             .withStyle(ChatFormatting.BOLD),
                     timeX, y + 26, data.boosting() ? AirshipGuiStyle.EMBER : TEXT, false);
-            bar(g, barX, y + 28, barWidth, (float) data.turboTicks() / AirshipEngineBlockEntity.MAX_FUEL,
+            bar(g, barX, y + 28, barWidth, (float) data.turboTicks() / AirshipEngineBlockEntity.MAX_TURBO,
                     AirshipGuiStyle.TURBO);
         }
     }

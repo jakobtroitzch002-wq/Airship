@@ -21,6 +21,9 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
@@ -34,13 +37,13 @@ import net.minecraft.world.phys.Vec3;
  */
 public class AirshipEntity extends Entity {
     // --- flight tuning (blocks per tick) ---
-    public static final double BASE_SPEED = 0.10;
-    public static final double ENGINE_BOOST = 0.22;
-    public static final double ENGINE_FALLOFF = 0.70;
+    /** Top speeds, in blocks per tick (the numbers are given in blocks per second): no fuel, fuel, turbo. */
+    public static final double BASE_SPEED = 2.5 / 20.0;
+    public static final double FUEL_SPEED = 5.0 / 20.0;
+    public static final double TURBO_SPEED = 15.0 / 20.0;
     /** The turbo tank burns this many times as fast as the normal one ... */
     public static final int TURBO_BURN_RATE = 5;
-    /** ... and, while it burns, multiplies the top speed and the acceleration. */
-    public static final double TURBO_SPEED_MULTIPLIER = 2.5;
+    /** ... and, while it burns, the ship also accelerates this many times as fast. */
     public static final double TURBO_ACCEL_MULTIPLIER = 3.0;
     private static final double VERTICAL_SPEED = 0.08;
     private static final double HORIZONTAL_ACCEL = 0.012;
@@ -58,6 +61,7 @@ public class AirshipEntity extends Entity {
     private List<AirshipClientCushion> clientCushions = List.of();
     private BlockPos primarySeat;
     private int landCooldown;
+    private int leadRecoveryTicks;
     private BlockPos[] surface;
     private int[] surfaceMask;
     private List<AirshipClientCell> exposed;
@@ -207,6 +211,11 @@ public class AirshipEntity extends Entity {
             setSeatOrder(payload.seats());
         }
         this.cellVersion++;
+    }
+
+    /** For a moment after takeoff, dropped leads nearby go back to the pilot (their leashes were released). */
+    public void recoverLeads() {
+        this.leadRecoveryTicks = 5;
     }
 
     /** The seat the player who started the ship sits on (it becomes the first seat). */
@@ -619,6 +628,18 @@ public class AirshipEntity extends Entity {
             return;
         }
 
+        if (leadRecoveryTicks > 0) {
+            leadRecoveryTicks--;
+            for (ItemEntity dropped : level.getEntitiesOfClass(
+                    ItemEntity.class, getBoundingBox().inflate(24.0), item -> item.getItem().is(Items.LEAD))) {
+                ItemStack stack = dropped.getItem();
+                pilot.getInventory().add(stack);
+                if (stack.isEmpty()) {
+                    dropped.discard();
+                }
+            }
+        }
+
         int flags = AirshipControls.flags(pilot, level.getGameTime());
 
         // --- turn so that the front of the ship (the way the Airship Seat faces) points where the pilot looks ---
@@ -682,8 +703,10 @@ public class AirshipEntity extends Entity {
         }
         int activeEngines = normalActive + turboActive;
         double turboShare = engineFuel.isEmpty() ? 0.0 : (double) turboActive / engineFuel.size();
-        double maxSpeed = (BASE_SPEED + ENGINE_BOOST * (1.0 - Math.pow(ENGINE_FALLOFF, activeEngines)))
-                * (1.0 + (TURBO_SPEED_MULTIPLIER - 1.0) * turboShare);
+        // Top speed: BASE with no fuel, FUEL with fuel, TURBO with turbo; engines count by their share.
+        int engineCount = engineFuel.size();
+        double fuelShare = engineCount == 0 ? 0.0 : (double) activeEngines / engineCount;
+        double maxSpeed = BASE_SPEED + (FUEL_SPEED - BASE_SPEED) * fuelShare + (TURBO_SPEED - FUEL_SPEED) * turboShare;
         double accel = HORIZONTAL_ACCEL * (1.0 + (TURBO_ACCEL_MULTIPLIER - 1.0) * turboShare);
         if (thrusting) {
             for (Map.Entry<BlockPos, Integer> entry : engineFuel.entrySet()) {

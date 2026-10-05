@@ -37,12 +37,12 @@ remembered yet: if the ship touches the ground, separate it with **Airship Build
 
 Right-click an Airship Engine to open its screen. Fuel is added only there, by putting it into the fuel slot
 (shift-click works too). The big timer shows how long the engine still runs; it only counts down while the
-pilot is thrusting, so it stays put while the ship hovers or is landed. The tank holds 20:00 minutes.
+pilot is thrusting, so it stays put while the ship hovers or is landed. The normal tank holds up to 1 hour (60:00), the turbo tank up to 10 minutes of turbo (10:00).
 
 | Fuel | Time per item |
 | --- | --- |
 | Coal, charcoal | 1:20 |
-| Lava bucket | 20:00 (needs an empty tank, you get the empty bucket back) |
+| Lava bucket | 20:00 (you get the empty bucket back) |
 | Coal block | 13:20 |
 | Blaze rod | 2:00 |
 | Planks, logs | 0:15 |
@@ -54,7 +54,7 @@ pilot is thrusting, so it stays put while the ship hovers or is landed. The tank
 The engine screen has a second fuel field, the **turbo tank**. Fuel goes in the same way and gives the same time
 per item, but the turbo tank burns **5 times as fast** (a coal lasts 0:16 instead of 1:20). While the pilot holds
 the boost key (`B`, rebindable, "Airship: turbo (hold)") and thrusts, every engine that has turbo fuel burns it
-instead of its normal fuel and the ship gets much faster: top speed x2.5, acceleration x3 (scaled by how many
+instead of its normal fuel and the ship gets much faster: top speed 15 blocks per second and 3x the acceleration (scaled by how many
 engines have turbo fuel). Engines without turbo fuel keep using their normal tank.
 
 ### Flight display
@@ -63,8 +63,16 @@ While you pilot a ship, a small compact display right above your hearts shows yo
 many engines are pushing, the fuel left in the fullest engine (time and bar), and, if there is any, the turbo fuel
 left (as turbo time, marked with T).
 
-Every fuelled engine makes the ship faster (with diminishing returns). Without fuel the ship still flies at its
-base speed. Items that do not fit into the tank anymore stay in the slot and go back to you when you close the screen.
+### Speeds
+
+| State | Top speed |
+| --- | --- |
+| No fuel | 2.5 blocks per second |
+| With fuel | 5 blocks per second |
+| With turbo | 15 blocks per second |
+
+With several engines the speed is blended by the share of engines that have fuel (or turbo fuel). Items that do not
+fit into the tank anymore stay in the slot and go back to you when you close the screen.
 
 ## Look
 
@@ -81,9 +89,9 @@ ship **does not take off while a mob, an item, an item frame or a painting is on
 "Tiere/Items an Bord: N"). Players and cushions are fine.
 
 To take mobs along, **leash them to a fence that belongs to the ship** (use a lead on the fence as usual) before
-takeoff. At takeoff those mobs stay where they stand and ride along with the ship (the ship has no floor for them, so
-a leash alone would break within a second as they fall). The leash stays as a rope, drawn from the fence closest to
-the Core. When the ship lands, the mobs are put down where they were carried and leashed to that fence again.
+takeoff. At takeoff those mobs get on board and ride along where they stand (the ship has no floor for them, so they
+cannot simply stand on it). Their leashes are released and the **leads go back to your inventory**. When the ship
+lands, the mobs are put down where they were carried. A short text above the hotbar tells you how many mobs came along.
 
 ## Cushions (Sitzkissen)
 

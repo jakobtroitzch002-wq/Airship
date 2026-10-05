@@ -27,7 +27,6 @@ import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.decoration.LeashFenceKnotEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -370,12 +369,21 @@ public final class AirshipAssembler {
         ship.setCushions(cushions);
         ship.setSeatOrder(seatOrder);
         serverLevel.addFreshEntity(ship);
+        // The leashed mobs get on board first. Their leashes are not moved to the ship (that made them get off
+        // again): the knots are removed and Minecraft releases the leashes the normal way. The ship gives the leads
+        // back to the pilot.
+        int riding = 0;
         for (Mob mob : leashedMobs) {
-            mob.setLeashedTo(ship, true);
-            mob.startRiding(ship, true, true);
+            if (mob.startRiding(ship, true, true)) {
+                riding++;
+            }
         }
         for (Entity knot : knots) {
             knot.discard();
+        }
+        if (!leashedMobs.isEmpty()) {
+            ship.recoverLeads();
+            tell(starter, "Tiere mitgenommen: " + riding + " von " + leashedMobs.size());
         }
 
         Map<Integer, Integer> assignment = new HashMap<>();
@@ -435,8 +443,6 @@ public final class AirshipAssembler {
         registerLanded(level, cells, anchor);
         restoreCushions(level, ship.getCushions(), anchor, snappedYaw(ship.getYRot()));
 
-        restoreLeashes(level, ship, cells, anchor);
-
         ship.ejectPassengers();
         ship.discard();
         return true;
@@ -474,34 +480,6 @@ public final class AirshipAssembler {
             }
             return true;
         });
-    }
-
-    /** After landing, mobs leashed to the ship are leashed to a fence knot of the landed ship again. */
-    private static void restoreLeashes(ServerLevel level, AirshipEntity ship, List<AirshipCell> cells, BlockPos anchor) {
-        List<Mob> mobs = level.getEntitiesOfClass(
-                Mob.class, new AABB(ship.blockPosition()).inflate(48.0), m -> m.getLeashHolder() == ship);
-        if (mobs.isEmpty()) {
-            return;
-        }
-        BlockPos fence = null;
-        double best = Double.MAX_VALUE;
-        for (AirshipCell cell : cells) {
-            if (cell.state().is(BlockTags.FENCES)) {
-                double distance = cell.pos().distSqr(BlockPos.ZERO);
-                if (distance < best) {
-                    best = distance;
-                    fence = anchor.offset(cell.pos());
-                }
-            }
-        }
-        if (fence == null) {
-            return; // no fence left: the leashes simply break when the ship goes away
-        }
-        Entity knot = LeashFenceKnotEntity.getOrCreateKnot(level, fence);
-        for (Mob mob : mobs) {
-            mob.setLeashedTo(knot, true);
-            mob.resetFallDistance();
-        }
     }
 
     private static boolean isAttachedToShip(Entity entity, Set<BlockPos> blocks) {
