@@ -13,6 +13,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
@@ -51,6 +52,7 @@ public class AirshipEntity extends Entity {
     private final Map<BlockPos, BlockState> stateByPos = new HashMap<>();
     private final Map<BlockPos, Integer> engineFuel = new HashMap<>();
     private final Map<BlockPos, Integer> turboFuel = new HashMap<>();
+    private Vec3 leashAnchor;
     private List<Vec3> seats = List.of();
     private List<AirshipCushion> cushions = List.of();
     private List<AirshipClientCushion> clientCushions = List.of();
@@ -127,6 +129,20 @@ public class AirshipEntity extends Entity {
             if (state.is(ModBlocks.AIRSHIP_SEAT)) {
                 this.controlYaw = state.getValue(AirshipSeatBlock.FACING).toYRot();
                 break;
+            }
+        }
+        // Leashed mobs hang on the ship; the rope is drawn from the fence closest to the Core.
+        this.leashAnchor = null;
+        double bestFence = Double.MAX_VALUE;
+        for (Map.Entry<BlockPos, BlockState> entry : stateByPos.entrySet()) {
+            if (entry.getValue().is(BlockTags.FENCES)) {
+                BlockPos p = entry.getKey();
+                double distance = (double) p.getX() * p.getX() + (double) p.getY() * p.getY()
+                        + (double) p.getZ() * p.getZ();
+                if (distance < bestFence) {
+                    bestFence = distance;
+                    this.leashAnchor = new Vec3(p.getX(), p.getY() + 0.75, p.getZ());
+                }
             }
         }
         computeSeats();
@@ -359,6 +375,16 @@ public class AirshipEntity extends Entity {
     /** A point of the ship (relative to its origin) rotated by the ship's yaw, in degrees. */
     public static Vec3 rotateLocal(Vec3 local, float yawDegrees) {
         return local.yRot((float) -Math.toRadians(yawDegrees));
+    }
+
+    /** Where the ropes of leashed mobs are attached: one of the ship's fences (or above the Core). */
+    @Override
+    public Vec3 getRopeHoldPosition(float partialTick) {
+        boolean client = level().isClientSide();
+        Vec3 base = client ? getSmoothPos(partialTick) : position();
+        float yaw = client ? getSmoothYaw(partialTick) : getYRot();
+        Vec3 local = leashAnchor != null ? leashAnchor : new Vec3(0.0, 1.0, 0.0);
+        return base.add(rotateLocal(local, yaw));
     }
 
     private Vec3 toWorldOffset(Vec3 local) {

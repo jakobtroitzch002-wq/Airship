@@ -74,6 +74,17 @@ Blocks and screens use the "Messing & Dampf" design: walnut and brass compass (C
 brass studs) and the Airship Build Block (brass and walnut frame, riveted copper panels, brass compass plates)
 use the same style.
 
+## Mobs and items on the ship
+
+The ship's blocks are not world blocks while it flies, so anything standing on it would fall through. That is why the
+ship **does not take off while a mob, an item, an item frame or a painting is on board** (the Core screen shows
+"Tiere/Items an Bord: N"). Players and cushions are fine.
+
+To take mobs along, **leash them to a fence that belongs to the ship** (use a lead on the fence as usual) before
+takeoff. At takeoff the leashes are moved to the ship itself, so the mobs follow it like a trailing line (they hang
+below and behind it; the rope is drawn from the fence closest to the Core). When the ship lands, they are leashed to
+that fence again. A mob that is leashed to a ship fence may stay on the deck when you take off.
+
 ## Cushions (Sitzkissen)
 
 Cushions (new in 26.3) are entities that players can sit on. On a ship they are passenger seats:
