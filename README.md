@@ -81,9 +81,9 @@ ship **does not take off while a mob, an item, an item frame or a painting is on
 "Tiere/Items an Bord: N"). Players and cushions are fine.
 
 To take mobs along, **leash them to a fence that belongs to the ship** (use a lead on the fence as usual) before
-takeoff. At takeoff the leashes are moved to the ship itself, so the mobs follow it like a trailing line (they hang
-below and behind it; the rope is drawn from the fence closest to the Core). When the ship lands, they are leashed to
-that fence again. A mob that is leashed to a ship fence may stay on the deck when you take off.
+takeoff. At takeoff those mobs stay where they stand and ride along with the ship (the ship has no floor for them, so
+a leash alone would break within a second as they fall). The leash stays as a rope, drawn from the fence closest to
+the Core. When the ship lands, the mobs are put down where they were carried and leashed to that fence again.
 
 ## Cushions (Sitzkissen)
 

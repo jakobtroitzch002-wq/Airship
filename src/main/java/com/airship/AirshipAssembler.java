@@ -315,6 +315,13 @@ public final class AirshipAssembler {
         for (SeatSpot spot : spots) {
             seatOrder.add(spot.local());
         }
+        // Leashed mobs ride along as passengers at the spot where they stand (the ship has no floor for them, so
+        // they would fall through and their leash would break).
+        Map<Mob, Integer> mobSpots = new HashMap<>();
+        for (Mob mob : leashedMobs) {
+            seatOrder.add(new Vec3(mob.getX() - originX, mob.getY() - originY, mob.getZ() - originZ));
+            mobSpots.put(mob, seatOrder.size() - 1);
+        }
 
         // Take the cushions off the ship so they can be carried along.
         List<AirshipCushion> cushions = new ArrayList<>();
@@ -365,6 +372,7 @@ public final class AirshipAssembler {
         serverLevel.addFreshEntity(ship);
         for (Mob mob : leashedMobs) {
             mob.setLeashedTo(ship, true);
+            mob.startRiding(ship, true, true);
         }
         for (Entity knot : knots) {
             knot.discard();
@@ -374,6 +382,9 @@ public final class AirshipAssembler {
         for (int i = 0; i < riders.size(); i++) {
             riders.get(i).startRiding(ship, true, true);
             assignment.put(riders.get(i).getId(), seatIndex[i]);
+        }
+        for (Map.Entry<Mob, Integer> entry : mobSpots.entrySet()) {
+            assignment.put(entry.getKey().getId(), entry.getValue());
         }
         ship.setSeatAssignment(assignment);
         AirshipSeatMapPayload seatMap = ship.seatMapPayload();
@@ -489,6 +500,7 @@ public final class AirshipAssembler {
         Entity knot = LeashFenceKnotEntity.getOrCreateKnot(level, fence);
         for (Mob mob : mobs) {
             mob.setLeashedTo(knot, true);
+            mob.resetFallDistance();
         }
     }
 
