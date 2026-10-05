@@ -20,9 +20,7 @@ public record AirshipCoreInfoPayload(
         int engines,
         int fuelTicks,
         int maxFuelTicks,
-        int fences,
-        int knots,
-        int leashed
+        int animals
 ) implements CustomPacketPayload {
     public static final Type<AirshipCoreInfoPayload> TYPE = new Type<>(
             Identifier.fromNamespaceAndPath(AirshipMod.MOD_ID, "airship_core_info")
@@ -36,7 +34,7 @@ public record AirshipCoreInfoPayload(
                             buf.readBlockPos(), buf.readBoolean(), buf.readUtf(),
                             buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt(),
                             buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt(),
-                            buf.readVarInt(), buf.readVarInt(), buf.readVarInt());
+                            buf.readVarInt());
                 }
 
                 @Override
@@ -53,9 +51,7 @@ public record AirshipCoreInfoPayload(
                     buf.writeVarInt(payload.engines());
                     buf.writeVarInt(payload.fuelTicks());
                     buf.writeVarInt(payload.maxFuelTicks());
-                    buf.writeVarInt(payload.fences());
-                    buf.writeVarInt(payload.knots());
-                    buf.writeVarInt(payload.leashed());
+                    buf.writeVarInt(payload.animals());
                 }
             };
 

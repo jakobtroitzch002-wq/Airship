@@ -84,16 +84,15 @@ use the same style.
 
 ## Mobs and items on the ship
 
-The ship's blocks are not world blocks while it flies, so anything standing on it would fall through. That is why the
-ship **does not take off while a mob, an item, an item frame or a painting is on board** (the Core screen shows
-"Tiere/Items an Bord: N"). Players and cushions are fine.
+The ship's blocks are not world blocks while it flies, so nothing could stand on them. **Mobs, boats and minecarts standing
+on the ship come along automatically**: at takeoff they get on board and ride along where they stand. When the ship lands, they
+are put down where they were carried. The Core screen shows how many are on board ("Tiere/Boote").
 
-To take mobs along, **leash them to a fence that belongs to the ship** (the fence must be registered: check the
-Core after building it). At takeoff those mobs get on board and ride along where they stand (the ship has no floor
-for them), and their leash is tied to the ship, so the rope stays visible. When the ship lands, the mobs are put down
-where they were carried and leashed to a fence of the landed ship again. A short text above the hotbar tells you what
-was found ("Leinen: n Knoten, m Tiere, ..."); the Core screen has a row "Leinen" with the fences, knots and leashed
-mobs it sees.
+Things that cannot come along stop the takeoff: **dropped items, item frames and paintings** on the ship (the Core
+screen shows "Items/Rahmen an Bord: N"). Players and cushions are fine.
+
+Leads do not work in flight. A lead tied to a fence of the ship is released at takeoff (the fence is gone) and the
+lead goes back to your inventory.
 
 ## Cushions (Sitzkissen)
 

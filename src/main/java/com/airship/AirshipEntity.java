@@ -420,8 +420,16 @@ public class AirshipEntity extends Entity {
         if (seats.isEmpty()) {
             return super.getDismountLocationForPassenger(passenger);
         }
-        // The ship lands as soon as the last passenger leaves, snapped to the block grid and to 90 degrees.
-        // Put the player on top of the seat block that will be placed there.
+        return landingSpot(passenger);
+    }
+
+    /**
+     * Where a passenger is put down when the ship lands: its own spot on the ship, in the block grid the ship
+     * snaps to. Used for living passengers when they get off and for boats, which are placed there directly.
+     */
+    public Vec3 landingSpot(Entity passenger) {
+        // The ship lands as soon as the pilot leaves, snapped to the block grid and to 90 degrees.
+        // Put the passenger on its spot of the landed ship (a player on top of the seat block).
         BlockPos anchor = AirshipAssembler.landingAnchor(this);
         Vec3 anchorPos = new Vec3(anchor.getX() + 0.5, anchor.getY(), anchor.getZ() + 0.5);
         double snappedRad = -Math.toRadians(AirshipAssembler.snappedYaw(getYRot()));

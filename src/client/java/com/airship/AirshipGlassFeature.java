@@ -48,14 +48,35 @@ final class AirshipGlassFeature {
             for (GlassSubmit submit : submits) {
                 quadInstance.setLightCoords(submit.light());
                 quadInstance.setOverlayCoords(OverlayTexture.NO_OVERLAY);
-                quadInstance.setColor(0xFFFFFFFF);
                 for (BlockStateModelPart part : submit.parts()) {
                     for (Direction direction : DIRECTIONS) {
+                        quadInstance.setColor(shadeColor(direction));
                         putQuads(part.getQuads(direction), submit.pose());
                     }
+                    quadInstance.setColor(shadeColor(null));
                     putQuads(part.getQuads(null), submit.pose());
                 }
             }
+        }
+
+        /**
+         * Blocks are not lit evenly: the top is brightest, the bottom darkest, the sides in between (the same
+         * values Minecraft uses). Without this the glass looked overexposed next to the rest of the ship.
+         */
+        private static int shadeColor(Direction direction) {
+            float shade;
+            if (direction == null) {
+                shade = 0.9F;
+            } else {
+                shade = switch (direction) {
+                    case UP -> 1.0F;
+                    case DOWN -> 0.5F;
+                    case NORTH, SOUTH -> 0.8F;
+                    case EAST, WEST -> 0.6F;
+                };
+            }
+            int value = Math.round(255.0F * shade);
+            return 0xFF000000 | (value << 16) | (value << 8) | value;
         }
 
         private void putQuads(List<BakedQuad> quads, PoseStack.Pose pose) {

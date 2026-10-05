@@ -81,8 +81,7 @@ public class AirshipCoreScreen extends Screen {
         rowY = row(g, x, rowY, "Größe", info.blocks() + " von " + info.maxBlocks() + " Blöcken",
                 info.blocks() < info.maxBlocks(), (float) info.blocks() / info.maxBlocks());
         rowY = row(g, x, rowY, "Sitzkissen", info.cushions() + " Mitfahrer-Plätze", true, -1.0F);
-        rowY = row(g, x, rowY, "Leinen", "Zaun " + info.fences() + " · Knoten " + info.knots()
-                + " · Tiere " + info.leashed(), true, -1.0F);
+        rowY = row(g, x, rowY, "Tiere/Boote", info.animals() + " an Bord (fahren mit)", true, -1.0F);
         row(g, x, rowY, "Antriebe", info.engines() + " verbaut", true, -1.0F);
 
         g.text(font, "Zum Fliegen auf den Steuersitz setzen.", x + 10, y + 186, AirshipGuiStyle.MUTED, false);
