@@ -14,13 +14,20 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.Options;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
-import net.minecraft.client.resources.language.I18n;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
 
 public final class AirshipClient implements ClientModInitializer {
+    /** How many tooltip lines each item has (the texts are in the language files). */
+    private static final java.util.Map<String, Integer> TOOLTIP_LINES = java.util.Map.of(
+            "airship_core", 2,
+            "airship_balloon", 1,
+            "airship_engine", 2,
+            "airship_seat", 2,
+            "airship_build", 2);
+
     /**
      * Descending has its own key (default C, rebindable) instead of the sprint key: the sprint key can
      * report "held" while toggled, which made the ship sink on its own.
@@ -60,18 +67,20 @@ public final class AirshipClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.AIRSHIP, AirshipEntityRenderer::new);
         AirshipGlassFeature.register();
 
-        // Short explanations on the items ("tooltip.airship.<item>", more lines as ".2", ".3" ...).
+        // Short explanations on the items ("tooltip.airship.<item>", further lines as ".2", ".3" ...).
         ItemTooltipCallback.EVENT.register((stack, context, flag, lines) -> {
             Identifier id = BuiltInRegistries.ITEM.getKey(stack.getItem());
             if (!AirshipMod.MOD_ID.equals(id.getNamespace())) {
                 return;
             }
-            String key = "tooltip.airship." + id.getPath();
-            if (I18n.exists(key)) {
-                lines.add(Component.translatable(key).withStyle(ChatFormatting.GRAY));
+            Integer count = TOOLTIP_LINES.get(id.getPath());
+            if (count == null) {
+                return;
             }
-            for (int i = 2; I18n.exists(key + "." + i); i++) {
-                lines.add(Component.translatable(key + "." + i).withStyle(ChatFormatting.GRAY));
+            String key = "tooltip.airship." + id.getPath();
+            for (int i = 1; i <= count; i++) {
+                String lineKey = i == 1 ? key : key + "." + i;
+                lines.add(Component.translatable(lineKey).withStyle(ChatFormatting.GRAY));
             }
         });
         AirshipHud.register();
