@@ -2,6 +2,7 @@ package com.airship;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.networking.v1.EntityTrackingEvents;
+import net.fabricmc.fabric.api.registry.FlammableBlockRegistry;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.BlockPos;
@@ -17,6 +18,8 @@ public final class AirshipMod implements ModInitializer {
     @Override
     public void onInitialize() {
         ModBlocks.initialize();
+        FlammableBlockRegistry.getDefaultInstance().add(ModBlocks.AIRSHIP_BALLOON, 30, 60);
+        FlammableBlockRegistry.getDefaultInstance().add(ModBlocks.AIRSHIP_SEAT, 5, 20);
         ModBlockEntities.initialize();
         ModEntities.initialize();
         ModMenus.initialize();

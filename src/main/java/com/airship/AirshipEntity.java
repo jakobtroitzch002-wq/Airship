@@ -38,11 +38,11 @@ import net.minecraft.world.phys.Vec3;
 public class AirshipEntity extends Entity {
     // --- flight tuning (blocks per tick) ---
     /** Top speeds, in blocks per tick (the numbers are given in blocks per second): no fuel, fuel, turbo. */
-    public static final double BASE_SPEED = 2.5 / 20.0;
-    public static final double FUEL_SPEED = 5.0 / 20.0;
-    public static final double TURBO_SPEED = 15.0 / 20.0;
+    public static final double BASE_SPEED = AirshipConfig.get().speedNoFuel / 20.0;
+    public static final double FUEL_SPEED = AirshipConfig.get().speedFuel / 20.0;
+    public static final double TURBO_SPEED = AirshipConfig.get().speedTurbo / 20.0;
     /** The turbo tank burns this many times as fast as the normal one ... */
-    public static final int TURBO_BURN_RATE = 5;
+    public static final int TURBO_BURN_RATE = AirshipConfig.get().turboBurnRate;
     /** ... and, while it burns, the ship also accelerates this many times as fast. */
     public static final double TURBO_ACCEL_MULTIPLIER = 3.0;
     private static final double VERTICAL_SPEED = 0.08;
@@ -62,6 +62,9 @@ public class AirshipEntity extends Entity {
     private BlockPos primarySeat;
     private int landCooldown;
     private int leadRecoveryTicks;
+    private int minCellY;
+    private int maxCellY;
+    private boolean landed;
     private BlockPos[] surface;
     private int[] surfaceMask;
     private List<AirshipClientCell> exposed;
@@ -125,6 +128,16 @@ public class AirshipEntity extends Entity {
                 engineFuel.put(pos, cell.fuel());
                 turboFuel.put(pos, cell.turbo());
             }
+        }
+
+        // Height of the ship (lowest and highest block), used to keep it inside the world.
+        this.minCellY = 0;
+        this.maxCellY = 0;
+        boolean firstCell = true;
+        for (BlockPos pos : stateByPos.keySet()) {
+            this.minCellY = firstCell ? pos.getY() : Math.min(this.minCellY, pos.getY());
+            this.maxCellY = firstCell ? pos.getY() : Math.max(this.maxCellY, pos.getY());
+            firstCell = false;
         }
 
         // The Airship Seat faces the front of the ship.
@@ -384,6 +397,27 @@ public class AirshipEntity extends Entity {
     /** A point of the ship (relative to its origin) rotated by the ship's yaw, in degrees. */
     public static Vec3 rotateLocal(Vec3 local, float yawDegrees) {
         return local.yRot((float) -Math.toRadians(yawDegrees));
+    }
+
+    /** Called when the ship was landed on purpose, so removing the entity afterwards is fine. */
+    public void markLanded() {
+        this.landed = true;
+    }
+
+    /**
+     * The ship's blocks only exist inside this entity. If it is removed in any way other than landing (for
+     * example with /kill), it tries to land first instead of destroying everything on board.
+     */
+    @Override
+    public void remove(RemovalReason reason) {
+        if (!landed && !cells.isEmpty() && level() instanceof ServerLevel serverLevel
+                && (reason == RemovalReason.KILLED || reason == RemovalReason.DISCARDED)) {
+            landed = true;
+            if (AirshipAssembler.disassemble(serverLevel, this)) {
+                return; // the landing removed the ship itself
+            }
+        }
+        super.remove(reason);
     }
 
     /** Where the ropes of leashed mobs are attached: one of the ship's fences (or above the Core). */
@@ -753,7 +787,15 @@ public class AirshipEntity extends Entity {
                     result.hitX() ? 0.0 : velocity.x,
                     result.hitY() ? 0.0 : velocity.y,
                     result.hitZ() ? 0.0 : velocity.z);
-            setPos(result.pos().x, result.pos().y, result.pos().z);
+            Vec3 newPos = result.pos();
+            double lowest = level.getMinY() + 1 - minCellY;
+            double highest = Math.max(lowest, level.getMaxY() - 1 - maxCellY);
+            double clampedY = Mth.clamp(newPos.y, lowest, highest);
+            if (clampedY != newPos.y) {
+                newPos = new Vec3(newPos.x, clampedY, newPos.z);
+                velocity = new Vec3(velocity.x, 0.0, velocity.z);
+            }
+            setPos(newPos.x, newPos.y, newPos.z);
         }
         setDeltaMovement(velocity);
         broadcastState(level);

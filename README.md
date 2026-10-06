@@ -101,6 +101,47 @@ Cushions (new in 26.3) are entities that players can sit on. On a ship they are 
 - When the ship takes off, cushions are removed and drawn as a wool slab of the same colour; when it lands
   they are placed again at the same spot (rotated with the ship).
 
+## Survival
+
+### Crafting
+
+All recipes are in the recipe book from the start, for every player (also in existing worlds).
+
+| Block | Recipe |
+| --- | --- |
+| Airship Core | 4 iron ingots + 4 gold ingots + compass (3x3, gold in the corners) |
+| Airship Balloon (makes 2) | wool, wool, string (in a column) |
+| Airship Seat | wool, 3 planks in a row, leather (in a column) |
+| Airship Build Block (makes 4) | 4 iron nuggets around a glass pane (plus shape) |
+| Airship Engine | 5 iron ingots + furnace + piston |
+
+There are also four small advancements in the Adventure tab (one per craftable ship part; no chat messages).
+
+### Breaking and tools
+
+| Block | Hardness | Tool | Sound |
+| --- | --- | --- | --- |
+| Core | 3.0 (blast resistance 6) | pickaxe (drops only with one) | metal |
+| Engine | 3.5 (blast resistance 6) | pickaxe (drops only with one) | metal |
+| Balloon | 0.8 | any (like wool), flammable | wool |
+| Seat | 1.5 (blast resistance 3) | axe, flammable | wood |
+| Build Block | 0.5 | hoe | grass |
+
+### Keeping the ship safe
+
+- The ship cannot fly below the bottom of the world or above the build height (important in a void world): both
+  are solid walls for it.
+- If the ship entity is ever removed other than by landing (for example with `/kill`), it tries to land first instead
+  of destroying everything on board.
+- While a ship flies, its blocks are not world blocks: furnaces, hoppers, redstone and crops on board do not work until
+  it lands again.
+
+### Settings
+
+`config/airship.json` is created on the first start. It holds: `maxBlocks` (largest ship), `blocksPerBalloon`,
+`speedNoFuel`, `speedFuel`, `speedTurbo` (blocks per second), `tankMinutes`, `turboTankMinutes` and `turboBurnRate`.
+Values are checked for sensible limits. On a server, client and server should use the same file.
+
 ## Notes
 
 - While flying, the ship's blocks are not world blocks: sit in your seat. Landing needs free space

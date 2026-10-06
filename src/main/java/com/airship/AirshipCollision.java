@@ -76,8 +76,8 @@ public final class AirshipCollision {
                 for (int by = y0; by <= y1; by++) {
                     for (int bz = z0; bz <= z1; bz++) {
                         cursor.set(bx, by, bz);
-                        if (!level.hasChunkAt(cursor)) {
-                            return true;
+                        if (!level.hasChunkAt(cursor) || level.isOutsideBuildHeight(cursor)) {
+                            return true; // unloaded terrain and everything above or below the world is a wall
                         }
                         BlockState state = level.getBlockState(cursor);
                         if (ModBlocks.isAirshipBuildBlock(state.getBlock())) {
@@ -164,8 +164,9 @@ public final class AirshipCollision {
                     for (int bz = z0; bz <= z1; bz++) {
                         cursor.set(bx, by, bz);
 
-                        if (!level.hasChunkAt(cursor)) {
-                            // Treat unloaded terrain as a solid wall so ships never fly into it.
+                        if (!level.hasChunkAt(cursor) || level.isOutsideBuildHeight(cursor)) {
+                            // Treat unloaded terrain and everything above or below the world as a solid wall,
+                            // so ships never fly into it or out of the build height.
                             allowed = clipAgainst(new AABB(bx, by, bz, bx + 1, by + 1, bz + 1),
                                     cellMin, size, axis, allowed);
                             continue;

@@ -4,7 +4,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 
 public final class AirshipLift {
-    public static final int BLOCKS_PER_BALLOON = 5;
+    public static final int BLOCKS_PER_BALLOON = AirshipConfig.get().blocksPerBalloon;
 
     private AirshipLift() {
     }

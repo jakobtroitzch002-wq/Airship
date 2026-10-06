@@ -3,15 +3,20 @@ package com.airship;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.Options;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
+import net.minecraft.client.resources.language.I18n;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
 
@@ -54,6 +59,21 @@ public final class AirshipClient implements ClientModInitializer {
         BlockEntityRenderers.register(ModBlockEntities.AIRSHIP_BUILD, AirshipBuildBlockRenderer::new);
         EntityRendererRegistry.register(ModEntities.AIRSHIP, AirshipEntityRenderer::new);
         AirshipGlassFeature.register();
+
+        // Short explanations on the items ("tooltip.airship.<item>", more lines as ".2", ".3" ...).
+        ItemTooltipCallback.EVENT.register((stack, context, flag, lines) -> {
+            Identifier id = BuiltInRegistries.ITEM.getKey(stack.getItem());
+            if (!AirshipMod.MOD_ID.equals(id.getNamespace())) {
+                return;
+            }
+            String key = "tooltip.airship." + id.getPath();
+            if (I18n.exists(key)) {
+                lines.add(Component.translatable(key).withStyle(ChatFormatting.GRAY));
+            }
+            for (int i = 2; I18n.exists(key + "." + i); i++) {
+                lines.add(Component.translatable(key + "." + i).withStyle(ChatFormatting.GRAY));
+            }
+        });
         AirshipHud.register();
 
         // Engine screen (a container menu) and Core screen (opened by the server's check result).

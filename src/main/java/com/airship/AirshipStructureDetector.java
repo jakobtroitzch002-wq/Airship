@@ -9,7 +9,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
 public final class AirshipStructureDetector {
-    public static final int MAX_BLOCKS = 4096;
+    public static final int MAX_BLOCKS = AirshipConfig.get().maxBlocks;
     /** How far (horizontally / vertically) from the Seat the search looks for the Core. */
     private static final int CORE_SEARCH_RADIUS = 32;
     private static final int CORE_SEARCH_HEIGHT = 24;

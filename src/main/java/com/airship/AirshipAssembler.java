@@ -125,7 +125,10 @@ public final class AirshipAssembler {
 
         int required = AirshipLift.requiredBalloons(blocks.size());
         String problem = "";
-        if (seats == 0) {
+        if (blocks.size() > max) {
+            // e.g. a ship registered when the limit was higher
+            problem = "Zu groß: " + blocks.size() + " von " + max + " Blöcken";
+        } else if (seats == 0) {
             problem = "Kein Steuersitz";
         } else if (seats > 1) {
             problem = "Mehr als ein Steuersitz";
@@ -445,6 +448,7 @@ public final class AirshipAssembler {
                 passenger.setPos(spot.x, spot.y, spot.z);
             }
         }
+        ship.markLanded();
         ship.ejectPassengers();
         ship.discard();
         return true;
