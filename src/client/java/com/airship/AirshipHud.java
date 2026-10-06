@@ -58,7 +58,7 @@ final class AirshipHud {
         // Speed and engines
         String speed = String.format("%.1f", data.speed()) + " b/s";
         g.text(font, Component.literal(speed).withStyle(ChatFormatting.BOLD), x + 4, y + 3, TEXT, false);
-        String engines = data.activeEngines() + "/" + data.engines() + " Antr.";
+        String engines = Component.translatable("hud.airship.engines", data.activeEngines(), data.engines()).getString();
         g.text(font, engines, x + WIDTH - 4 - font.width(engines), y + 3, MUTED, false);
 
         int timeX = x + 15;

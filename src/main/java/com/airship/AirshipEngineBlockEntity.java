@@ -73,7 +73,7 @@ public class AirshipEngineBlockEntity extends BlockEntity implements MenuProvide
 
     @Override
     public Component getDisplayName() {
-        return Component.literal("Luftschiff-Antrieb");
+        return Component.translatable("screen.airship.engine");
     }
 
     @Override

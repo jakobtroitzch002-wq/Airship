@@ -13,7 +13,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.tags.BlockTags;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
@@ -32,8 +31,8 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * An assembled airship. All blocks of the ship live inside this entity (relative to the former
- * Core position). The ship stays assembled until a player lands it (sneak + right-click),
- * hovers in place when nobody is flying it, and turns to face the way the pilot looks.
+ * Core position). The ship flies while a pilot sits on the control seat, turns to face the way the
+ * pilot looks, and turns back into blocks as soon as the pilot leaves the seat.
  */
 public class AirshipEntity extends Entity {
     // --- flight tuning (blocks per tick) ---
@@ -55,11 +54,9 @@ public class AirshipEntity extends Entity {
     private final Map<BlockPos, BlockState> stateByPos = new HashMap<>();
     private final Map<BlockPos, Integer> engineFuel = new HashMap<>();
     private final Map<BlockPos, Integer> turboFuel = new HashMap<>();
-    private Vec3 leashAnchor;
     private List<Vec3> seats = List.of();
     private List<AirshipCushion> cushions = List.of();
     private List<AirshipClientCushion> clientCushions = List.of();
-    private BlockPos primarySeat;
     private int landCooldown;
     private int leadRecoveryTicks;
     private int minCellY;
@@ -148,20 +145,6 @@ public class AirshipEntity extends Entity {
                 break;
             }
         }
-        // Leashed mobs hang on the ship; the rope is drawn from the fence closest to the Core.
-        this.leashAnchor = null;
-        double bestFence = Double.MAX_VALUE;
-        for (Map.Entry<BlockPos, BlockState> entry : stateByPos.entrySet()) {
-            if (entry.getValue().is(BlockTags.FENCES)) {
-                BlockPos p = entry.getKey();
-                double distance = (double) p.getX() * p.getX() + (double) p.getY() * p.getY()
-                        + (double) p.getZ() * p.getZ();
-                if (distance < bestFence) {
-                    bestFence = distance;
-                    this.leashAnchor = new Vec3(p.getX(), p.getY() + 0.75, p.getZ());
-                }
-            }
-        }
         computeSeats();
 
         this.surface = null;
@@ -231,12 +214,6 @@ public class AirshipEntity extends Entity {
         this.leadRecoveryTicks = 5;
     }
 
-    /** The seat the player who started the ship sits on (it becomes the first seat). */
-    public void setPrimarySeat(BlockPos relativeSeat) {
-        this.primarySeat = relativeSeat.immutable();
-        computeSeats();
-    }
-
     private void computeSeats() {
         List<BlockPos> seatCells = new ArrayList<>();
         for (Map.Entry<BlockPos, BlockState> entry : stateByPos.entrySet()) {
@@ -244,10 +221,9 @@ public class AirshipEntity extends Entity {
                 seatCells.add(entry.getKey());
             }
         }
-        // The primary seat first, then the seats closest to the Core.
+        // The seat closest to the Core first (a ship has exactly one control seat).
         seatCells.sort(Comparator
-                .comparingInt((BlockPos p) -> p.equals(primarySeat) ? 0 : 1)
-                .thenComparingDouble(p -> (double) p.getX() * p.getX() + (double) p.getY() * p.getY()
+                .comparingDouble((BlockPos p) -> (double) p.getX() * p.getX() + (double) p.getY() * p.getY()
                         + (double) p.getZ() * p.getZ())
                 .thenComparingInt(BlockPos::getY)
                 .thenComparingInt(BlockPos::getX)
@@ -265,10 +241,6 @@ public class AirshipEntity extends Entity {
         cushionSeats.sort(Comparator.comparingDouble(Vec3::lengthSqr));
         found.addAll(cushionSeats);
         this.seats = List.copyOf(found);
-    }
-
-    public List<AirshipCell> getCells() {
-        return cells;
     }
 
     /** All cells with the current engine fuel merged in (used for saving and landing). */
@@ -418,16 +390,6 @@ public class AirshipEntity extends Entity {
             }
         }
         super.remove(reason);
-    }
-
-    /** Where the ropes of leashed mobs are attached: one of the ship's fences (or above the Core). */
-    @Override
-    public Vec3 getRopeHoldPosition(float partialTick) {
-        boolean client = level().isClientSide();
-        Vec3 base = client ? getSmoothPos(partialTick) : position();
-        float yaw = client ? getSmoothYaw(partialTick) : getYRot();
-        Vec3 local = leashAnchor != null ? leashAnchor : new Vec3(0.0, 1.0, 0.0);
-        return base.add(rotateLocal(local, yaw));
     }
 
     private Vec3 toWorldOffset(Vec3 local) {
@@ -662,8 +624,7 @@ public class AirshipEntity extends Entity {
                 if (level.getGameTime() % 100 == 0) {
                     for (ServerPlayer nearby : level.getEntitiesOfClass(
                             ServerPlayer.class, getBoundingBox().inflate(32.0))) {
-                        nearby.sendOverlayMessage(Component.literal(
-                                "Luftschiff kann hier nicht landen: zu wenig Platz"));
+                        nearby.sendOverlayMessage(Component.translatable("message.airship.cannot_land"));
                     }
                 }
             }

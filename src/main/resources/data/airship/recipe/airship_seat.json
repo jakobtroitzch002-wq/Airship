@@ -2,12 +2,12 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "W": "#minecraft:wool",
     "P": "#minecraft:planks",
-    "L": "minecraft:leather"
+    "L": "minecraft:leather",
+    "C": "#minecraft:cushions"
   },
   "pattern": [
-    " W ",
+    " C ",
     "PPP",
     " L "
   ],

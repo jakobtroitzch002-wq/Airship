@@ -21,7 +21,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.Clearable;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityTypes;
@@ -83,7 +82,7 @@ public final class AirshipAssembler {
         int max = AirshipStructureDetector.MAX_BLOCKS;
         if (detection.capped()) {
             return new AirshipCoreInfoPayload(
-                    corePos, false, "Zu groß oder berührt das Gelände", max, max, 0, 0, 0, 0, 0, 0, 0, 0);
+                    corePos, false, problem("problem.airship.capped"), max, max, 0, 0, 0, 0, 0, 0, 0, 0);
         }
 
         Set<BlockPos> found = detection.blocks();
@@ -127,18 +126,18 @@ public final class AirshipAssembler {
         String problem = "";
         if (blocks.size() > max) {
             // e.g. a ship registered when the limit was higher
-            problem = "Zu groß: " + blocks.size() + " von " + max + " Blöcken";
+            problem = problem("problem.airship.too_big", blocks.size(), max);
         } else if (seats == 0) {
-            problem = "Kein Steuersitz";
+            problem = problem("problem.airship.no_seat");
         } else if (seats > 1) {
-            problem = "Mehr als ein Steuersitz";
+            problem = problem("problem.airship.many_seats");
         } else if (!AirshipLift.hasEnoughLift(balloons, required)) {
-            problem = "Zu wenige Ballons";
+            problem = problem("problem.airship.balloons");
         }
         if (problem.isEmpty()) {
             int onBoard = blockingEntities(level, area, blocks).size();
             if (onBoard > 0) {
-                problem = "Items/Rahmen an Bord: " + onBoard;
+                problem = problem("problem.airship.on_board", onBoard);
             }
         }
         return new AirshipCoreInfoPayload(
@@ -163,7 +162,7 @@ public final class AirshipAssembler {
         // 1. Find the Core this block belongs to.
         BlockPos corePos = AirshipStructureDetector.findCore(level, startPos);
         if (corePos == null) {
-            tell(player, "Kein Luftschiff-Kern verbunden");
+            tell(player, Component.translatable("message.airship.no_core"));
             return InteractionResult.SUCCESS;
         }
 
@@ -175,7 +174,7 @@ public final class AirshipAssembler {
         AirshipCoreBlockEntity coreEntity =
                 level.getBlockEntity(corePos) instanceof AirshipCoreBlockEntity c ? c : null;
         if (coreEntity == null || coreEntity.getRegistered().isEmpty()) {
-            fail(starter, analyze(serverLevel, corePos, false), "Nicht registriert: Kern prüfen");
+            fail(starter, analyze(serverLevel, corePos, false), problem("problem.airship.not_registered"));
             return InteractionResult.SUCCESS;
         }
         Set<BlockPos> blocks = new HashSet<>();
@@ -199,7 +198,7 @@ public final class AirshipAssembler {
             return InteractionResult.SUCCESS;
         }
         if (!blocks.contains(startPos)) {
-            fail(starter, info, "Sitz nicht registriert: Kern prüfen");
+            fail(starter, info, problem("problem.airship.seat_not_registered"));
             return InteractionResult.SUCCESS;
         }
 
@@ -271,7 +270,7 @@ public final class AirshipAssembler {
         }
         List<ServerPlayer> riders = new ArrayList<>(riderSet);
         if (riders.size() > 1 + cushionCount) {
-            fail(starter, info, "Zu wenige Sitzkissen: " + (riders.size() - 1) + " Mitfahrer, " + cushionCount + " Kissen");
+            fail(starter, info, problem("problem.airship.cushions", riders.size() - 1, cushionCount));
             return InteractionResult.SUCCESS;
         }
 
@@ -382,7 +381,7 @@ public final class AirshipAssembler {
             ship.recoverLeads();
         }
         if (!carriedMobs.isEmpty()) {
-            tell(starter, "Tiere mitgenommen: " + riding + " von " + carriedMobs.size());
+            tell(starter, Component.translatable("message.airship.carried", riding, carriedMobs.size()));
         }
 
         Map<Integer, Integer> assignment = new HashMap<>();
@@ -708,8 +707,20 @@ public final class AirshipAssembler {
     }
 
     /** Short text above the hotbar (not in the chat). Only for cases without a screen, e.g. no Core nearby. */
-    private static void tell(Player player, String message) {
-        player.sendOverlayMessage(Component.literal(message));
+    private static void tell(Player player, Component message) {
+        player.sendOverlayMessage(message);
+    }
+
+    /**
+     * A problem for the Core screen: a translation key, optionally followed by values ("key|value|value").
+     * The screen translates it in the player's language.
+     */
+    private static String problem(String key, Object... values) {
+        StringBuilder text = new StringBuilder(key);
+        for (Object value : values) {
+            text.append('|').append(value);
+        }
+        return text.toString();
     }
 
     /** Shows a problem on the Core screen. */

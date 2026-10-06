@@ -13,6 +13,8 @@ public final class AirshipStructureDetector {
     /** How far (horizontally / vertically) from the Seat the search looks for the Core. */
     private static final int CORE_SEARCH_RADIUS = 32;
     private static final int CORE_SEARCH_HEIGHT = 24;
+    private static final int NEAR_RADIUS = 12;
+    private static final int NEAR_HEIGHT = 10;
 
     private AirshipStructureDetector() {}
 
@@ -33,15 +35,26 @@ public final class AirshipStructureDetector {
         if (level.getBlockState(start).is(ModBlocks.AIRSHIP_CORE)) {
             return start.immutable();
         }
+        // Almost always the Core is close: look there first and only search the whole box if that finds nothing.
+        BlockPos near = searchCore(level, start, NEAR_RADIUS, NEAR_HEIGHT, true);
+        if (near != null) {
+            return near;
+        }
+        return searchCore(level, start, CORE_SEARCH_RADIUS, CORE_SEARCH_HEIGHT, false);
+    }
 
+    /**
+     * Searches a box around {@code start}. Returns the Core whose registered ship contains {@code start}, or (if
+     * {@code onlyRegistered} is false) otherwise the nearest Core.
+     */
+    private static BlockPos searchCore(Level level, BlockPos start, int radius, int height, boolean onlyRegistered) {
         BlockPos nearest = null;
         double nearestDistance = Double.MAX_VALUE;
         BlockPos registered = null;
         double registeredDistance = Double.MAX_VALUE;
 
         for (BlockPos pos : BlockPos.betweenClosed(
-                start.offset(-CORE_SEARCH_RADIUS, -CORE_SEARCH_HEIGHT, -CORE_SEARCH_RADIUS),
-                start.offset(CORE_SEARCH_RADIUS, CORE_SEARCH_HEIGHT, CORE_SEARCH_RADIUS))) {
+                start.offset(-radius, -height, -radius), start.offset(radius, height, radius))) {
             if (!level.hasChunkAt(pos) || !level.getBlockState(pos).is(ModBlocks.AIRSHIP_CORE)) {
                 continue;
             }
@@ -60,7 +73,10 @@ public final class AirshipStructureDetector {
                 registered = core;
             }
         }
-        return registered != null ? registered : nearest;
+        if (registered != null) {
+            return registered;
+        }
+        return onlyRegistered ? null : nearest;
     }
 
     public static DetectionResult detect(Level level, BlockPos start) {

@@ -111,7 +111,7 @@ All recipes are in the recipe book from the start, for every player (also in exi
 | --- | --- |
 | Airship Core | 4 iron ingots + 4 gold ingots + compass (3x3, gold in the corners) |
 | Airship Balloon (makes 2) | wool, wool, string (in a column) |
-| Airship Seat | wool, 3 planks in a row, leather (in a column) |
+| Airship Seat | cushion, 3 planks in a row, leather (in a column) |
 | Airship Build Block (makes 4) | 4 iron nuggets around a glass pane (plus shape) |
 | Airship Engine | 5 iron ingots + furnace + piston |
 

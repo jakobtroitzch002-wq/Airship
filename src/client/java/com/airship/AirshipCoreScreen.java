@@ -16,7 +16,7 @@ public class AirshipCoreScreen extends Screen {
     private AirshipCoreInfoPayload info;
 
     public AirshipCoreScreen(AirshipCoreInfoPayload info) {
-        super(Component.literal("Luftschiff-Kern"));
+        super(Component.translatable("screen.airship.core"));
         this.info = info;
     }
 
@@ -32,11 +32,11 @@ public class AirshipCoreScreen extends Screen {
     protected void init() {
         int x = (width - PANEL_W) / 2;
         int y = (height - PANEL_H) / 2;
-        addRenderableWidget(Button.builder(Component.literal("Neu prüfen"), button -> send(AirshipCoreActionPayload.RECHECK))
+        addRenderableWidget(Button.builder(Component.translatable("screen.airship.core.recheck"), button -> send(AirshipCoreActionPayload.RECHECK))
                 .pos(x + 10, y + 160)
                 .size(92, 20)
                 .build());
-        addRenderableWidget(Button.builder(Component.literal("Gelände vergessen"), button -> send(AirshipCoreActionPayload.FORGET_TERRAIN))
+        addRenderableWidget(Button.builder(Component.translatable("screen.airship.core.forget"), button -> send(AirshipCoreActionPayload.FORGET_TERRAIN))
                 .pos(x + PANEL_W - 10 - 92, y + 160)
                 .size(92, 20)
                 .build());
@@ -60,32 +60,49 @@ public class AirshipCoreScreen extends Screen {
 
         // Title and status badge
         AirshipGuiStyle.compass(g, x + 10, y + 9);
-        g.text(font, Component.literal("Luftschiff-Kern").withStyle(ChatFormatting.BOLD),
+        g.text(font, Component.translatable("screen.airship.core").withStyle(ChatFormatting.BOLD),
                 x + 25, y + 11, AirshipGuiStyle.TEXT, false);
-        String badge = info.ready() ? "BEREIT" : "NICHT BEREIT";
+        String badge = tr(info.ready() ? "screen.airship.core.ready" : "screen.airship.core.not_ready");
         int badgeWidth = font.width(badge) + 8;
         int badgeX = x + PANEL_W - 10 - badgeWidth;
         g.fill(badgeX, y + 9, badgeX + badgeWidth, y + 21, info.ready() ? AirshipGuiStyle.OK : AirshipGuiStyle.BAD);
         g.text(font, badge, badgeX + 4, y + 11, AirshipGuiStyle.WHITE, false);
         if (!info.ready()) {
-            g.text(font, info.problem(), x + 10, y + 24, AirshipGuiStyle.BAD, false);
+            g.text(font, problemText(info.problem()), x + 10, y + 24, AirshipGuiStyle.BAD, false);
         }
 
         // Checklist
         int rowY = y + 36;
-        rowY = row(g, x, rowY, "Steuersitz", info.seatBlocks() + " von 1", info.seatBlocks() == 1,
-                Math.min(1.0F, info.seatBlocks()));
+        rowY = row(g, x, rowY, tr("screen.airship.core.seat"), tr("screen.airship.core.seat_value", info.seatBlocks()),
+                info.seatBlocks() == 1, Math.min(1.0F, info.seatBlocks()));
         float lift = info.balloonsRequired() == 0 ? 1.0F : (float) info.balloons() / info.balloonsRequired();
-        rowY = row(g, x, rowY, "Auftrieb", info.balloons() + " Ballons · " + info.balloonsRequired() + " nötig",
+        rowY = row(g, x, rowY, tr("screen.airship.core.lift"),
+                tr("screen.airship.core.lift_value", info.balloons(), info.balloonsRequired()),
                 info.balloons() >= info.balloonsRequired(), lift);
-        rowY = row(g, x, rowY, "Größe", info.blocks() + " von " + info.maxBlocks() + " Blöcken",
+        rowY = row(g, x, rowY, tr("screen.airship.core.size"),
+                tr("screen.airship.core.size_value", info.blocks(), info.maxBlocks()),
                 info.blocks() < info.maxBlocks(), (float) info.blocks() / info.maxBlocks());
-        rowY = row(g, x, rowY, "Sitzkissen", info.cushions() + " Mitfahrer-Plätze", true, -1.0F);
-        rowY = row(g, x, rowY, "Tiere/Boote", info.animals() + " an Bord (fahren mit)", true, -1.0F);
-        row(g, x, rowY, "Antriebe", info.engines() + " verbaut", true, -1.0F);
+        rowY = row(g, x, rowY, tr("screen.airship.core.cushions"),
+                tr("screen.airship.core.cushions_value", info.cushions()), true, -1.0F);
+        rowY = row(g, x, rowY, tr("screen.airship.core.animals"),
+                tr("screen.airship.core.animals_value", info.animals()), true, -1.0F);
+        row(g, x, rowY, tr("screen.airship.core.engines"),
+                tr("screen.airship.core.engines_value", info.engines()), true, -1.0F);
 
-        g.text(font, "Zum Fliegen auf den Steuersitz setzen.", x + 10, y + 186, AirshipGuiStyle.MUTED, false);
-        g.text(font, "Umgebaut? Erst hier prüfen.", x + 10, y + 196, AirshipGuiStyle.MUTED, false);
+        g.text(font, tr("screen.airship.core.hint1"), x + 10, y + 186, AirshipGuiStyle.MUTED, false);
+        g.text(font, tr("screen.airship.core.hint2"), x + 10, y + 196, AirshipGuiStyle.MUTED, false);
+    }
+
+    private static String tr(String key, Object... values) {
+        return Component.translatable(key, values).getString();
+    }
+
+    /** The server sends a problem as "key|value|value": translate it in the player's language. */
+    private static String problemText(String raw) {
+        String[] parts = raw.split("\\|");
+        Object[] values = new Object[parts.length - 1];
+        System.arraycopy(parts, 1, values, 0, values.length);
+        return tr(parts[0], values);
     }
 
     /** Draws one checklist row and returns the y of the next row. A negative fraction means: no bar. */
