@@ -101,6 +101,19 @@ Cushions (new in 26.3) are entities that players can sit on. On a ship they are 
 - When the ship takes off, cushions are removed and drawn as a wool slab of the same colour; when it lands
   they are placed again at the same spot (rotated with the ship).
 
+## Tiers: cheaper parts for small ships
+
+| Part | Difference | Recipe |
+| --- | --- | --- |
+| Wooden Airship Core | holds ships of up to **25 blocks** | 8 planks around a compass |
+| Iron Airship Core | holds ships of up to **250 blocks** | 8 iron ingots around a compass |
+| Airship Core | holds ships up to the config limit (2000 by default) | see Survival |
+| Simple Airship Balloon (makes 2) | **half the lift**: two count as one Balloon | white wool, white wool, string (column) |
+| Simple Airship Engine | gives **60 %** of the fuel speed boost and has **no turbo** | 5 iron ingots + furnace (U shape, 2 rows) |
+
+The Core screen shows lift in balloons (a Simple Balloon counts as 0.5). A Simple Engine has no turbo tank, so its
+screen only has the fuel slot. Mixed ships work: speed is blended by how much of the engine power is fuelled.
+
 ## Survival
 
 ### Crafting

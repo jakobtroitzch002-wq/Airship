@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/cube_column",
+  "textures": {
+    "end": "airship:block/airship_engine_simple_top",
+    "side": "airship:block/airship_engine_simple_side"
+  }
+}
