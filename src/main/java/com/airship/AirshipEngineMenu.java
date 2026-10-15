@@ -31,7 +31,7 @@ public class AirshipEngineMenu extends AbstractContainerMenu {
 
     /** Client side. */
     public AirshipEngineMenu(int containerId, Inventory inventory) {
-        this(containerId, inventory, null, new SimpleContainerData(2));
+        this(containerId, inventory, null, new SimpleContainerData(3));
     }
 
     /** Server side. */
@@ -63,7 +63,7 @@ public class AirshipEngineMenu extends AbstractContainerMenu {
         addSlot(new Slot(turboContainer, 0, AirshipEngineLayout.TURBO_X + 1, AirshipEngineLayout.TURBO_Y + 1) {
             @Override
             public boolean mayPlace(ItemStack stack) {
-                return isFuel(stack);
+                return canTurbo() && isFuel(stack);
             }
         });
         for (int row = 0; row < 3; row++) {
@@ -83,6 +83,11 @@ public class AirshipEngineMenu extends AbstractContainerMenu {
 
     public static boolean isFuel(ItemStack stack) {
         return AirshipFuel.isFuel(stack);
+    }
+
+    /** False for the Simple Engine: it has no turbo tank. */
+    public boolean canTurbo() {
+        return data.get(2) != 0;
     }
 
     /** Remaining fuel of the normal tank, in ticks of thrust. */
@@ -114,7 +119,7 @@ public class AirshipEngineMenu extends AbstractContainerMenu {
         while (!stack.isEmpty()) {
             int burn = AirshipFuel.burnTime(stack);
             int current = turbo ? engine.getTurbo() : engine.getFuel();
-            int limit = turbo ? AirshipEngineBlockEntity.MAX_TURBO : AirshipEngineBlockEntity.MAX_FUEL;
+            int limit = turbo ? engine.maxTurbo() : AirshipEngineBlockEntity.MAX_FUEL;
             if (burn <= 0 || current + burn > limit) {
                 break;
             }

@@ -79,7 +79,7 @@ public final class AirshipAssembler {
             }
         }
         AirshipStructureDetector.DetectionResult detection = AirshipStructureDetector.detect(level, corePos, ignored);
-        int max = AirshipStructureDetector.MAX_BLOCKS;
+        int max = ModBlocks.coreLimit(level.getBlockState(corePos));
         if (detection.capped()) {
             return new AirshipCoreInfoPayload(
                     corePos, false, problem("problem.airship.capped"), max, max, 0, 0, 0, 0, 0, 0, 0, 0);
@@ -99,7 +99,7 @@ public final class AirshipAssembler {
 
     /** Counts what the given set of ship blocks has and what it is missing, without changing anything. */
     private static AirshipCoreInfoPayload describe(ServerLevel level, BlockPos corePos, Set<BlockPos> blocks) {
-        int max = AirshipStructureDetector.MAX_BLOCKS;
+        int max = ModBlocks.coreLimit(level.getBlockState(corePos));
         AABB area = boundsOf(blocks);
         int cushions = level.getEntitiesOfClass(
                 Entity.class, area, e -> AirshipCushions.isCushion(e) && isAttachedToShip(e, blocks)).size();
@@ -110,11 +110,11 @@ public final class AirshipAssembler {
         int fuel = 0;
         for (BlockPos pos : blocks) {
             BlockState state = level.getBlockState(pos);
-            if (state.is(ModBlocks.AIRSHIP_BALLOON)) {
-                balloons++;
+            if (ModBlocks.liftOf(state) > 0) {
+                balloons += ModBlocks.liftOf(state);
             } else if (state.is(ModBlocks.AIRSHIP_SEAT)) {
                 seats++;
-            } else if (state.is(ModBlocks.AIRSHIP_ENGINE)) {
+            } else if (ModBlocks.isEngine(state)) {
                 engines++;
                 if (level.getBlockEntity(pos) instanceof AirshipEngineBlockEntity engine) {
                     fuel += engine.getFuel();
@@ -122,7 +122,7 @@ public final class AirshipAssembler {
             }
         }
 
-        int required = AirshipLift.requiredBalloons(blocks.size());
+        int required = AirshipLift.requiredLift(blocks.size());
         String problem = "";
         if (blocks.size() > max) {
             // e.g. a ship registered when the limit was higher
@@ -218,12 +218,12 @@ public final class AirshipAssembler {
         BlockPos controlSeat = null;
         for (BlockPos pos : blocks) {
             BlockState state = level.getBlockState(pos);
-            if (state.is(ModBlocks.AIRSHIP_BALLOON)) {
-                balloons++;
+            if (ModBlocks.liftOf(state) > 0) {
+                balloons += ModBlocks.liftOf(state);
             } else if (state.is(ModBlocks.AIRSHIP_SEAT)) {
                 seatBlocks++;
                 controlSeat = pos;
-            } else if (state.is(ModBlocks.AIRSHIP_ENGINE)) {
+            } else if (ModBlocks.isEngine(state)) {
                 engines++;
             }
         }
@@ -531,7 +531,7 @@ public final class AirshipAssembler {
     /** The landed ship is registered again (its blocks are at new, possibly rotated, positions). */
     private static void registerLanded(ServerLevel level, List<AirshipCell> cells, BlockPos anchor) {
         for (AirshipCell core : cells) {
-            if (!core.state().is(ModBlocks.AIRSHIP_CORE)) {
+            if (!ModBlocks.isCore(core.state())) {
                 continue;
             }
             if (level.getBlockEntity(anchor.offset(core.pos())) instanceof AirshipCoreBlockEntity coreEntity) {
@@ -557,7 +557,7 @@ public final class AirshipAssembler {
         for (AirshipCell cell : cells) {
             BlockPos target = anchor.offset(cell.pos()).immutable();
             shipBlocks.add(target);
-            if (cell.state().is(ModBlocks.AIRSHIP_CORE)) {
+            if (ModBlocks.isCore(cell.state())) {
                 cores.add(target);
             }
         }

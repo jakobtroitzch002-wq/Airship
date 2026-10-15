@@ -121,7 +121,7 @@ public class AirshipEntity extends Entity {
         for (AirshipCell cell : cells) {
             BlockPos pos = cell.pos().immutable();
             stateByPos.put(pos, cell.state());
-            if (cell.state().is(ModBlocks.AIRSHIP_ENGINE)) {
+            if (ModBlocks.isEngine(cell.state())) {
                 engineFuel.put(pos, cell.fuel());
                 turboFuel.put(pos, cell.turbo());
             }
@@ -697,18 +697,22 @@ public class AirshipEntity extends Entity {
         boolean wantBoost = thrusting && (flags & AirshipControlPayload.BOOST) != 0;
         int normalActive = 0;
         int turboActive = 0;
+        double activePower = 0.0; // a Simple Engine only gives part of the fuel speed boost
         for (Map.Entry<BlockPos, Integer> entry : engineFuel.entrySet()) {
             if (wantBoost && turboFuel.getOrDefault(entry.getKey(), 0) > 0) {
                 turboActive++;
+                activePower += 1.0;
             } else if (entry.getValue() > 0) {
                 normalActive++;
+                BlockState engineState = stateByPos.get(entry.getKey());
+                activePower += engineState == null ? 1.0 : ModBlocks.enginePower(engineState);
             }
         }
         int activeEngines = normalActive + turboActive;
         double turboShare = engineFuel.isEmpty() ? 0.0 : (double) turboActive / engineFuel.size();
         // Top speed: BASE with no fuel, FUEL with fuel, TURBO with turbo; engines count by their share.
         int engineCount = engineFuel.size();
-        double fuelShare = engineCount == 0 ? 0.0 : (double) activeEngines / engineCount;
+        double fuelShare = engineCount == 0 ? 0.0 : activePower / engineCount;
         double maxSpeed = BASE_SPEED + (FUEL_SPEED - BASE_SPEED) * fuelShare + (TURBO_SPEED - FUEL_SPEED) * turboShare;
         double accel = HORIZONTAL_ACCEL * (1.0 + (TURBO_ACCEL_MULTIPLIER - 1.0) * turboShare);
         if (thrusting) {

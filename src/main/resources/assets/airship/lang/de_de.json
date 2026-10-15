@@ -16,7 +16,7 @@
   "advancement.airship.seat.description": "Stelle einen Luftschiff-Sitz her.",
   "advancement.airship.engine.title": "Volle Kraft voraus",
   "advancement.airship.engine.description": "Stelle einen Luftschiff-Antrieb her.",
-  "tooltip.airship.airship_core": "Hält das Schiff zusammen.",
+  "tooltip.airship.airship_core": "Hält das Schiff zusammen. Für die größten Schiffe.",
   "tooltip.airship.airship_core.2": "Rechtsklick: Schiff prüfen und registrieren.",
   "tooltip.airship.airship_balloon": "Trägt das Schiff: ein Ballon pro 5 Schiffsblöcke.",
   "tooltip.airship.airship_engine": "Rechtsklick: Treibstoff einfüllen.",
@@ -65,5 +65,18 @@
   "problem.airship.on_board": "Items/Rahmen an Bord: %s",
   "problem.airship.not_registered": "Nicht registriert: Kern prüfen",
   "problem.airship.seat_not_registered": "Sitz nicht registriert: Kern prüfen",
-  "problem.airship.cushions": "Zu wenige Sitzkissen: %s Mitfahrer, %s Kissen"
+  "problem.airship.cushions": "Zu wenige Sitzkissen: %s Mitfahrer, %s Kissen",
+  "block.airship.airship_core_wood": "Hölzerner Luftschiff-Kern",
+  "block.airship.airship_core_iron": "Eiserner Luftschiff-Kern",
+  "block.airship.airship_balloon_simple": "Einfacher Luftschiff-Ballon",
+  "block.airship.airship_engine_simple": "Einfacher Luftschiff-Antrieb",
+  "tooltip.airship.airship_core_wood": "Hält ein kleines Schiff: bis zu 25 Blöcke.",
+  "tooltip.airship.airship_core_wood.2": "Rechtsklick: Schiff prüfen und registrieren.",
+  "tooltip.airship.airship_core_iron": "Hält ein mittleres Schiff: bis zu 250 Blöcke.",
+  "tooltip.airship.airship_core_iron.2": "Rechtsklick: Schiff prüfen und registrieren.",
+  "tooltip.airship.airship_balloon_simple": "Halber Auftrieb eines Ballons: zwei zählen als einer.",
+  "tooltip.airship.airship_engine_simple": "Rechtsklick: Treibstoff einfüllen.",
+  "tooltip.airship.airship_engine_simple.2": "Langsamer als der Luftschiff-Antrieb und ohne Turbo.",
+  "screen.airship.engine.no_turbo": "Kein Turbo bei diesem Antrieb",
+  "screen.airship.engine.simple": "Einfacher Luftschiff-Antrieb"
 }

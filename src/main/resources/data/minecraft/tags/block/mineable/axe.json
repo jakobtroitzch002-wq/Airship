@@ -1,6 +1,7 @@
 {
   "replace": false,
   "values": [
-    "airship:airship_seat"
+    "airship:airship_seat",
+    "airship:airship_core_wood"
   ]
 }

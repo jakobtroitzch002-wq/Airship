@@ -27,6 +27,9 @@ public class AirshipEngineBlockEntity extends BlockEntity implements MenuProvide
         /** Sent in seconds: the menu data is only 16 bits wide, 1 hour in ticks (72000) would not fit. */
         @Override
         public int get(int index) {
+            if (index == 2) {
+                return canTurbo() ? 1 : 0;
+            }
             return (index == 0 ? fuel : turbo) / 20;
         }
 
@@ -36,12 +39,21 @@ public class AirshipEngineBlockEntity extends BlockEntity implements MenuProvide
 
         @Override
         public int getCount() {
-            return 2;
+            return 3;
         }
     };
 
     public AirshipEngineBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.AIRSHIP_ENGINE, pos, state);
+    }
+
+    /** Only the normal Engine has a turbo tank; the Simple Engine does not. */
+    public boolean canTurbo() {
+        return ModBlocks.engineHasTurbo(getBlockState());
+    }
+
+    public int maxTurbo() {
+        return canTurbo() ? MAX_TURBO : 0;
     }
 
     public int getFuel() {
@@ -63,7 +75,7 @@ public class AirshipEngineBlockEntity extends BlockEntity implements MenuProvide
     }
 
     public void setTurbo(int turbo) {
-        this.turbo = Math.max(0, Math.min(MAX_TURBO, turbo));
+        this.turbo = Math.max(0, Math.min(maxTurbo(), turbo));
         setChanged();
     }
 
@@ -73,7 +85,7 @@ public class AirshipEngineBlockEntity extends BlockEntity implements MenuProvide
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable("screen.airship.engine");
+        return Component.translatable(getBlockState().getBlock().getDescriptionId());
     }
 
     @Override

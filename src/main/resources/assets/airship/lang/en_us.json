@@ -16,7 +16,7 @@
   "advancement.airship.seat.description": "Craft an Airship Seat.",
   "advancement.airship.engine.title": "Full Steam Ahead",
   "advancement.airship.engine.description": "Craft an Airship Engine.",
-  "tooltip.airship.airship_core": "Holds the ship together.",
+  "tooltip.airship.airship_core": "Holds the ship together. For the largest ships.",
   "tooltip.airship.airship_core.2": "Right-click: check and register the ship.",
   "tooltip.airship.airship_balloon": "Carries the ship: one balloon per 5 ship blocks.",
   "tooltip.airship.airship_engine": "Right-click: add fuel.",
@@ -65,5 +65,18 @@
   "problem.airship.on_board": "Items/frames on board: %s",
   "problem.airship.not_registered": "Not registered: check the Core",
   "problem.airship.seat_not_registered": "Seat not registered: check the Core",
-  "problem.airship.cushions": "Not enough cushions: %s passengers, %s cushions"
+  "problem.airship.cushions": "Not enough cushions: %s passengers, %s cushions",
+  "block.airship.airship_core_wood": "Wooden Airship Core",
+  "block.airship.airship_core_iron": "Iron Airship Core",
+  "block.airship.airship_balloon_simple": "Simple Airship Balloon",
+  "block.airship.airship_engine_simple": "Simple Airship Engine",
+  "tooltip.airship.airship_core_wood": "Holds a small ship: up to 25 blocks.",
+  "tooltip.airship.airship_core_wood.2": "Right-click: check and register the ship.",
+  "tooltip.airship.airship_core_iron": "Holds a medium ship: up to 250 blocks.",
+  "tooltip.airship.airship_core_iron.2": "Right-click: check and register the ship.",
+  "tooltip.airship.airship_balloon_simple": "Half the lift of a balloon: two count as one.",
+  "tooltip.airship.airship_engine_simple": "Right-click: add fuel.",
+  "tooltip.airship.airship_engine_simple.2": "Slower than the Airship Engine and without turbo.",
+  "screen.airship.engine.no_turbo": "No turbo with this engine",
+  "screen.airship.engine.simple": "Simple Airship Engine"
 }

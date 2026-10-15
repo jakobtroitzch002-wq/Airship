@@ -21,7 +21,11 @@
       "conditions": {
         "items": [
           {
-            "items": "airship:airship_core"
+            "items": [
+              "airship:airship_core",
+              "airship:airship_core_wood",
+              "airship:airship_core_iron"
+            ]
           }
         ]
       }

@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "L": "#minecraft:logs",
+    "P": "#minecraft:planks",
+    "I": "minecraft:iron_ingot"
+  },
+  "pattern": [
+    "LPL",
+    "PIP",
+    "LPL"
+  ],
+  "result": {
+    "id": "airship:airship_core_wood",
+    "count": 1
+  }
+}

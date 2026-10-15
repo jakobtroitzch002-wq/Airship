@@ -32,7 +32,7 @@ public final class AirshipStructureDetector {
      * nearest one is returned (the caller then tells the player that the block is not registered).
      */
     public static BlockPos findCore(Level level, BlockPos start) {
-        if (level.getBlockState(start).is(ModBlocks.AIRSHIP_CORE)) {
+        if (ModBlocks.isCore(level.getBlockState(start))) {
             return start.immutable();
         }
         // Almost always the Core is close: look there first and only search the whole box if that finds nothing.
@@ -55,7 +55,7 @@ public final class AirshipStructureDetector {
 
         for (BlockPos pos : BlockPos.betweenClosed(
                 start.offset(-radius, -height, -radius), start.offset(radius, height, radius))) {
-            if (!level.hasChunkAt(pos) || !level.getBlockState(pos).is(ModBlocks.AIRSHIP_CORE)) {
+            if (!level.hasChunkAt(pos) || !ModBlocks.isCore(level.getBlockState(pos))) {
                 continue;
             }
             BlockPos core = pos.immutable();

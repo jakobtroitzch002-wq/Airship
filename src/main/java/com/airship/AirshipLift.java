@@ -6,11 +6,13 @@ public final class AirshipLift {
     private AirshipLift() {
     }
 
-    public static int requiredBalloons(int blockCount) {
-        return Math.max(1, (blockCount + BLOCKS_PER_BALLOON - 1) / BLOCKS_PER_BALLOON);
+    /** Lift the ship needs, in half balloons: one Balloon (2) per {@code BLOCKS_PER_BALLOON} ship blocks. */
+    public static int requiredLift(int blockCount) {
+        int balloons = Math.max(1, (blockCount + BLOCKS_PER_BALLOON - 1) / BLOCKS_PER_BALLOON);
+        return balloons * ModBlocks.BALLOON_LIFT;
     }
 
-    public static boolean hasEnoughLift(int balloonCount, int requiredBalloons) {
-        return balloonCount >= requiredBalloons;
+    public static boolean hasEnoughLift(int lift, int requiredLift) {
+        return lift >= requiredLift;
     }
 }

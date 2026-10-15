@@ -19,6 +19,8 @@ public final class AirshipMod implements ModInitializer {
     public void onInitialize() {
         ModBlocks.initialize();
         FlammableBlockRegistry.getDefaultInstance().add(ModBlocks.AIRSHIP_BALLOON, 30, 60);
+        FlammableBlockRegistry.getDefaultInstance().add(ModBlocks.AIRSHIP_BALLOON_SIMPLE, 30, 60);
+        FlammableBlockRegistry.getDefaultInstance().add(ModBlocks.AIRSHIP_CORE_WOOD, 5, 20);
         FlammableBlockRegistry.getDefaultInstance().add(ModBlocks.AIRSHIP_SEAT, 5, 20);
         ModBlockEntities.initialize();
         ModEntities.initialize();
@@ -63,7 +65,7 @@ public final class AirshipMod implements ModInitializer {
             BlockPos pos = payload.pos();
             if (player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > 64.0
                     || !level.hasChunkAt(pos)
-                    || !level.getBlockState(pos).is(ModBlocks.AIRSHIP_CORE)) {
+                    || !ModBlocks.isCore(level.getBlockState(pos))) {
                 return;
             }
             if (payload.action() == AirshipCoreActionPayload.FORGET_TERRAIN

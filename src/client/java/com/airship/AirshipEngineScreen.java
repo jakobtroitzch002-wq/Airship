@@ -35,7 +35,7 @@ public class AirshipEngineScreen extends AbstractContainerScreen<AirshipEngineMe
 
         // Title
         AirshipGuiStyle.flame(g, x + 10, y + 8);
-        g.text(font, Component.translatable("screen.airship.engine").withStyle(ChatFormatting.BOLD),
+        g.text(font, Component.empty().append(title).withStyle(ChatFormatting.BOLD),
                 x + 23, y + 9, AirshipGuiStyle.TEXT, false);
         g.text(font, tr("screen.airship.engine.thrust_only"), x + 10, y + 22, AirshipGuiStyle.MUTED, false);
 
@@ -62,25 +62,33 @@ public class AirshipEngineScreen extends AbstractContainerScreen<AirshipEngineMe
         AirshipGuiStyle.bar(g, left, y + 62, right - left, 7,
                 (float) fuel / AirshipEngineBlockEntity.MAX_FUEL, AirshipGuiStyle.FLAME);
 
-        // Turbo tank: burns 5x as fast, makes the ship much faster while the boost key is held
-        AirshipGuiStyle.slot(g, x + AirshipEngineLayout.TURBO_X, y + AirshipEngineLayout.TURBO_Y);
-        AirshipGuiStyle.arrow(g, x + 32, y + 85, AirshipGuiStyle.MUTED);
+        if (menu.canTurbo()) {
+            // Turbo tank: burns 5x as fast, makes the ship much faster while the boost key is held
+            AirshipGuiStyle.slot(g, x + AirshipEngineLayout.TURBO_X, y + AirshipEngineLayout.TURBO_Y);
+            AirshipGuiStyle.arrow(g, x + 32, y + 85, AirshipGuiStyle.MUTED);
 
-        int turbo = menu.getTurbo();
-        g.text(font, Component.translatable("screen.airship.engine.turbo").withStyle(ChatFormatting.BOLD), left, y + 76,
-                AirshipGuiStyle.TURBO, false);
-        String burn = tr("screen.airship.engine.burn", AirshipEntity.TURBO_BURN_RATE);
-        g.text(font, burn, right - font.width(burn), y + 76, AirshipGuiStyle.MUTED, false);
-        // The turbo tank is shown as the time of turbo it gives (its fuel burns TURBO_BURN_RATE times as fast).
-        String turboTime = AirshipFuel.time(turbo / AirshipEntity.TURBO_BURN_RATE);
-        g.text(font, Component.translatable("screen.airship.engine.turbo_time", turboTime).withStyle(ChatFormatting.BOLD), left, y + 86,
-                turbo > 0 ? AirshipGuiStyle.TEXT : AirshipGuiStyle.MUTED, false);
-        AirshipGuiStyle.bar(g, left, y + 97, right - left, 7,
-                (float) turbo / AirshipEngineBlockEntity.MAX_TURBO, AirshipGuiStyle.TURBO);
+            int turbo = menu.getTurbo();
+            g.text(font, Component.translatable("screen.airship.engine.turbo").withStyle(ChatFormatting.BOLD), left, y + 76,
+                    AirshipGuiStyle.TURBO, false);
+            String burn = tr("screen.airship.engine.burn", AirshipEntity.TURBO_BURN_RATE);
+            g.text(font, burn, right - font.width(burn), y + 76, AirshipGuiStyle.MUTED, false);
+            // The turbo tank is shown as the time of turbo it gives (its fuel burns TURBO_BURN_RATE times as fast).
+            String turboTime = AirshipFuel.time(turbo / AirshipEntity.TURBO_BURN_RATE);
+            g.text(font, Component.translatable("screen.airship.engine.turbo_time", turboTime).withStyle(ChatFormatting.BOLD), left, y + 86,
+                    turbo > 0 ? AirshipGuiStyle.TEXT : AirshipGuiStyle.MUTED, false);
+            AirshipGuiStyle.bar(g, left, y + 97, right - left, 7,
+                    (float) turbo / AirshipEngineBlockEntity.MAX_TURBO, AirshipGuiStyle.TURBO);
 
-        // Stat tiles
-        tile(g, x + 10, y + 110, 88, tr("screen.airship.engine.tile_fuel"), speedText(AirshipEntity.FUEL_SPEED));
-        tile(g, x + 106, y + 110, 88, tr("screen.airship.engine.turbo"), speedText(AirshipEntity.TURBO_SPEED));
+            // Stat tiles
+            tile(g, x + 10, y + 110, 88, tr("screen.airship.engine.tile_fuel"), speedText(AirshipEntity.FUEL_SPEED));
+            tile(g, x + 106, y + 110, 88, tr("screen.airship.engine.turbo"), speedText(AirshipEntity.TURBO_SPEED));
+        } else {
+            // Simple Engine: no turbo tank, no turbo slot
+            g.text(font, tr("screen.airship.engine.no_turbo"), x + 10, y + 76, AirshipGuiStyle.MUTED, false);
+            tile(g, x + 10, y + 110, 194, tr("screen.airship.engine.tile_fuel"),
+                    speedText(AirshipEntity.BASE_SPEED
+                            + (AirshipEntity.FUEL_SPEED - AirshipEntity.BASE_SPEED) * ModBlocks.SIMPLE_ENGINE_POWER));
+        }
 
         // Inventory
         g.text(font, tr("container.inventory"), x + 10, y + 142, AirshipGuiStyle.TEXT, false);

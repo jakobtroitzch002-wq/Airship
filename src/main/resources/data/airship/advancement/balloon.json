@@ -21,7 +21,10 @@
       "conditions": {
         "items": [
           {
-            "items": "airship:airship_balloon"
+            "items": [
+              "airship:airship_balloon",
+              "airship:airship_balloon_simple"
+            ]
           }
         ]
       }

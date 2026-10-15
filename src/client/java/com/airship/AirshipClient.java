@@ -23,6 +23,10 @@ public final class AirshipClient implements ClientModInitializer {
     /** How many tooltip lines each item has (the texts are in the language files). */
     private static final java.util.Map<String, Integer> TOOLTIP_LINES = java.util.Map.of(
             "airship_core", 2,
+            "airship_core_wood", 2,
+            "airship_core_iron", 2,
+            "airship_balloon_simple", 1,
+            "airship_engine_simple", 2,
             "airship_balloon", 1,
             "airship_engine", 2,
             "airship_seat", 2,
