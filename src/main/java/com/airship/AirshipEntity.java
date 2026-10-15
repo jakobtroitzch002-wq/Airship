@@ -721,7 +721,8 @@ public class AirshipEntity extends Entity {
                 if (wantBoost && turbo > 0) {
                     turboFuel.put(entry.getKey(), Math.max(0, turbo - TURBO_BURN_RATE));
                 } else if (entry.getValue() > 0) {
-                    entry.setValue(entry.getValue() - 1);
+                    int burn = ModBlocks.engineBurnRate(stateByPos.get(entry.getKey()));
+                    entry.setValue(Math.max(0, entry.getValue() - burn));
                 }
             }
         }
@@ -769,8 +770,9 @@ public class AirshipEntity extends Entity {
         if (level.getGameTime() % 5 == 0) {
             int fuelMax = 0;
             int turboMax = 0;
-            for (int value : engineFuel.values()) {
-                fuelMax = Math.max(fuelMax, value);
+            for (Map.Entry<BlockPos, Integer> entry : engineFuel.entrySet()) {
+                // shown as thrust time: a Simple Engine's tank empties faster
+                fuelMax = Math.max(fuelMax, entry.getValue() / ModBlocks.engineBurnRate(stateByPos.get(entry.getKey())));
             }
             for (int value : turboFuel.values()) {
                 turboMax = Math.max(turboMax, value);

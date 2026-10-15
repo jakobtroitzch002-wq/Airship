@@ -37,13 +37,14 @@ public final class ModBlocks {
     public static final ResourceKey<Item> AIRSHIP_ENGINE_SIMPLE_ITEM_KEY = itemKey("airship_engine_simple");
 
     /** Largest ship of the wooden and the iron Core (the normal Core uses the limit from the config). */
-    public static final int WOOD_CORE_BLOCKS = 25;
-    public static final int IRON_CORE_BLOCKS = 250;
-    /** Lift in half balloons: a Balloon is 2, a Simple Balloon 1. */
-    public static final int BALLOON_LIFT = 2;
-    public static final int SIMPLE_BALLOON_LIFT = 1;
+    public static final int WOOD_CORE_BLOCKS = 50;
+    public static final int IRON_CORE_BLOCKS = 500;
+    /** Ship blocks a Simple Balloon carries (a normal Balloon carries {@code blocksPerBalloon} from the config). */
+    public static final int SIMPLE_BALLOON_CARRY = 3;
     /** How much of the fuel speed boost a Simple Engine gives compared to the normal Engine. */
     public static final double SIMPLE_ENGINE_POWER = 0.6;
+    /** A Simple Engine burns this many ticks of fuel per tick of thrust (the normal Engine burns 1). */
+    public static final int SIMPLE_ENGINE_BURN_RATE = 2;
 
     public static final Block AIRSHIP_CORE = register(AIRSHIP_CORE_KEY, AirshipCoreBlock::new, BlockBehaviour.Properties.of().strength(3.0F, 6.0F).sound(SoundType.METAL).requiresCorrectToolForDrops());
     public static final Block AIRSHIP_CORE_WOOD = register(AIRSHIP_CORE_WOOD_KEY, AirshipCoreBlock::new, BlockBehaviour.Properties.of().strength(1.5F, 3.0F).sound(SoundType.WOOD));
@@ -89,12 +90,12 @@ public final class ModBlocks {
         return AirshipStructureDetector.MAX_BLOCKS;
     }
 
-    /** Lift of a block in half balloons (0 for blocks that give none). */
+    /** Lift of a block: how many ship blocks it carries (0 for blocks that give none). */
     public static int liftOf(BlockState state) {
         if (state.is(AIRSHIP_BALLOON)) {
-            return BALLOON_LIFT;
+            return AirshipLift.BLOCKS_PER_BALLOON;
         }
-        return state.is(AIRSHIP_BALLOON_SIMPLE) ? SIMPLE_BALLOON_LIFT : 0;
+        return state.is(AIRSHIP_BALLOON_SIMPLE) ? Math.min(SIMPLE_BALLOON_CARRY, AirshipLift.BLOCKS_PER_BALLOON) : 0;
     }
 
     public static boolean isEngine(BlockState state) {
@@ -104,6 +105,11 @@ public final class ModBlocks {
     /** Share of the fuel speed boost that this engine gives. */
     public static double enginePower(BlockState state) {
         return state.is(AIRSHIP_ENGINE_SIMPLE) ? SIMPLE_ENGINE_POWER : 1.0;
+    }
+
+    /** Ticks of fuel this engine burns per tick of thrust. */
+    public static int engineBurnRate(BlockState state) {
+        return state != null && state.is(AIRSHIP_ENGINE_SIMPLE) ? SIMPLE_ENGINE_BURN_RATE : 1;
     }
 
     public static boolean engineHasTurbo(BlockState state) {

@@ -77,7 +77,7 @@ public class AirshipCoreScreen extends Screen {
                 info.seatBlocks() == 1, Math.min(1.0F, info.seatBlocks()));
         float lift = info.balloonsRequired() == 0 ? 1.0F : (float) info.balloons() / info.balloonsRequired();
         rowY = row(g, x, rowY, tr("screen.airship.core.lift"),
-                tr("screen.airship.core.lift_value", halves(info.balloons()), halves(info.balloonsRequired())),
+                tr("screen.airship.core.lift_value", info.balloons(), info.balloonsRequired()),
                 info.balloons() >= info.balloonsRequired(), lift);
         rowY = row(g, x, rowY, tr("screen.airship.core.size"),
                 tr("screen.airship.core.size_value", info.blocks(), info.maxBlocks()),
@@ -91,11 +91,6 @@ public class AirshipCoreScreen extends Screen {
 
         g.text(font, tr("screen.airship.core.hint1"), x + 10, y + 186, AirshipGuiStyle.MUTED, false);
         g.text(font, tr("screen.airship.core.hint2"), x + 10, y + 196, AirshipGuiStyle.MUTED, false);
-    }
-
-    /** Lift is counted in half balloons: 5 shows as "2.5", 4 as "2". */
-    private static String halves(int halfBalloons) {
-        return halfBalloons % 2 == 0 ? String.valueOf(halfBalloons / 2) : (halfBalloons / 2) + ".5";
     }
 
     private static String tr(String key, Object... values) {

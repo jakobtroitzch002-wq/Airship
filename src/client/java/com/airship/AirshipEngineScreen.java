@@ -44,13 +44,15 @@ public class AirshipEngineScreen extends AbstractContainerScreen<AirshipEngineMe
         AirshipGuiStyle.arrow(g, x + 32, y + 43, AirshipGuiStyle.MUTED);
 
         int fuel = menu.getFuel();
+        // A Simple Engine (no turbo) burns its fuel faster, so it gives less thrust time per tank.
+        int burnRate = menu.canTurbo() ? 1 : ModBlocks.SIMPLE_ENGINE_BURN_RATE;
         int left = x + 48;
         int right = x + imageWidth - 10;
         g.text(font, tr("screen.airship.engine.remaining"), left, y + 32, AirshipGuiStyle.MUTED, false);
-        String max = tr("screen.airship.engine.of_max", AirshipFuel.time(AirshipEngineBlockEntity.MAX_FUEL));
+        String max = tr("screen.airship.engine.of_max", AirshipFuel.time(AirshipEngineBlockEntity.MAX_FUEL / burnRate));
         g.text(font, max, right - font.width(max), y + 32, AirshipGuiStyle.MUTED, false);
 
-        String timer = AirshipFuel.time(fuel);
+        String timer = AirshipFuel.time(fuel / burnRate);
         g.pose().pushMatrix();
         g.pose().translate((float) left, (float) (y + 42));
         g.pose().scale(2.0F);
