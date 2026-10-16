@@ -108,12 +108,28 @@ Cushions (new in 26.3) are entities that players can sit on. On a ship they are 
 | Wooden Airship Core | holds ships of up to **25 blocks** | 4 logs (corners) + 4 planks around 1 iron ingot |
 | Iron Airship Core | holds ships of up to **100 blocks** | 8 iron ingots around a Wooden Airship Core |
 | Airship Core | holds ships of up to **500 blocks** | see Survival |
-| Simple Airship Balloon (makes 2) | carries only **3 ship blocks** (a Balloon carries 5) | wool over a stick |
+| Simple Airship Balloon (makes 2) | carries only **3 ship blocks** (a Balloon carries 5), pops from **any** projectile | wool over a stick |
+| Reinforced Airship Balloon (makes 4) | like a Balloon, but only pops from **tridents** and **crossbow arrows with Piercing III** | 4 Balloons (corners) + 4 leather + 1 iron ingot (middle) |
 | Simple Airship Engine | gives **60 %** of the fuel speed boost, has **no turbo** and burns **twice the fuel** | iron ingot, cobblestone, furnace, 3 planks |
 
 All core limits are capped by `maxBlocks` from the config. The Core screen shows how many ship blocks the balloons
 carry and how many are needed. A Simple Engine has no turbo tank, so its
 screen only has the fuel slot. Mixed ships work: speed is blended by how much of the engine power is fuelled.
+
+## Shooting down balloons
+
+Projectiles pop balloons, placed ones and those of a flying ship (no drop):
+
+| Balloon | Pops from |
+| --- | --- |
+| Simple Airship Balloon | every projectile: snowballs, eggs, arrows ... |
+| Airship Balloon | arrows (bow, crossbow, dispenser), tridents, fireballs, wither skulls, fireworks |
+| Reinforced Airship Balloon | tridents, and arrows from a crossbow with Piercing III |
+
+Weaker projectiles bounce off. On a flying ship the hull shields the balloons behind it, and a Piercing arrow
+can pop one more balloon per level. If the ship no longer has enough lift, it cannot climb and slowly sinks.
+The projectile lists are the entity type tags `airship:pops_balloon` and `airship:pops_reinforced_balloon`, so a
+data pack can change them.
 
 ## Survival
 

@@ -1,6 +1,7 @@
 package com.airship;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -10,10 +11,13 @@ import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
@@ -21,12 +25,14 @@ import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -49,6 +55,8 @@ public class AirshipEntity extends Entity {
     private static final double VERTICAL_ACCEL = 0.02;
     /** Maximum turn rate in degrees per tick. */
     private static final float MAX_TURN = 3.5F;
+    /** How fast a ship without enough lift sinks (blocks per tick). */
+    private static final double SINK_SPEED = 0.05;
 
     private List<AirshipCell> cells = List.of();
     private final Map<BlockPos, BlockState> stateByPos = new HashMap<>();
@@ -66,6 +74,13 @@ public class AirshipEntity extends Entity {
     private int[] surfaceMask;
     private List<AirshipClientCell> exposed;
     private int cellVersion;
+    /** Lift of all balloons on board and the lift the ship needs (see {@link AirshipLift}). */
+    private int lift;
+    private int requiredLift;
+    /** Largest horizontal distance of a cell from the origin, used to find projectiles near the ship. */
+    private double radius;
+    /** Server only: projectiles that already hit a balloon -> how many more balloons they may pop. */
+    private final Map<Integer, Integer> projectileHits = new HashMap<>();
 
     // server only
     private Vec3 velocity = Vec3.ZERO;
@@ -136,6 +151,15 @@ public class AirshipEntity extends Entity {
             this.maxCellY = firstCell ? pos.getY() : Math.max(this.maxCellY, pos.getY());
             firstCell = false;
         }
+
+        this.lift = 0;
+        this.radius = 0.0;
+        for (Map.Entry<BlockPos, BlockState> entry : stateByPos.entrySet()) {
+            this.lift += ModBlocks.liftOf(entry.getValue());
+            BlockPos p = entry.getKey();
+            this.radius = Math.max(this.radius, Math.sqrt((double) p.getX() * p.getX() + (double) p.getZ() * p.getZ()));
+        }
+        this.requiredLift = AirshipLift.requiredLift(stateByPos.size());
 
         // The Airship Seat faces the front of the ship.
         this.controlYaw = 0.0F;
@@ -734,7 +758,13 @@ public class AirshipEntity extends Entity {
         double targetY = 0.0;
         boolean up = (flags & AirshipControlPayload.UP) != 0;
         boolean down = (flags & AirshipControlPayload.DOWN) != 0;
-        if (up) {
+        if (lift < requiredLift) {
+            // balloons were shot down: the ship can no longer climb and slowly sinks
+            targetY = down ? -VERTICAL_SPEED : -SINK_SPEED;
+            if (level.getGameTime() % 40 == 0) {
+                pilot.sendOverlayMessage(Component.translatable("message.airship.sinking"));
+            }
+        } else if (up) {
             targetY = VERTICAL_SPEED; // ascending always wins if both keys are held
         } else if (down) {
             targetY = -VERTICAL_SPEED;
@@ -764,6 +794,7 @@ public class AirshipEntity extends Entity {
             setPos(newPos.x, newPos.y, newPos.z);
         }
         setDeltaMovement(velocity);
+        checkProjectiles(level);
         broadcastState(level);
 
         // Flight display for the pilot (a few times per second is plenty).
@@ -780,6 +811,123 @@ public class AirshipEntity extends Entity {
             ServerPlayNetworking.send(pilot, new AirshipHudPayload(
                     fuelMax, turboMax, engineFuel.size(), activeEngines,
                     (float) (velocity.length() * 20.0), turboActive > 0));
+        }
+    }
+
+    // ------------------------------------------------------------------ projectiles
+
+    /**
+     * Balloons of a flying ship can be shot down. The ship's blocks only exist inside this entity, so the path
+     * of every projectile near the ship is followed through the ship's block grid. The first balloon on the path
+     * pops if the projectile is strong enough (see {@link AirshipBalloons#pops}); otherwise the projectile
+     * bounces off it.
+     */
+    private void checkProjectiles(ServerLevel level) {
+        if (level.getGameTime() % 20 == 0) {
+            projectileHits.keySet().removeIf(id -> level.getEntity(id) == null);
+        }
+        if (lift == 0) {
+            return;
+        }
+        Vec3 origin = position();
+        AABB area = new AABB(
+                origin.x - radius - 1.0, origin.y + minCellY, origin.z - radius - 1.0,
+                origin.x + radius + 1.0, origin.y + maxCellY + 1.0, origin.z + radius + 1.0).inflate(4.0);
+        double angle = -Math.toRadians(getYRot());
+        double cos = Math.cos(angle);
+        double sin = Math.sin(angle);
+        boolean changed = false;
+
+        for (Projectile projectile : level.getEntitiesOfClass(Projectile.class, area)) {
+            if (projectile.isRemoved() || projectileHits.getOrDefault(projectile.getId(), 1) <= 0) {
+                continue;
+            }
+            // From where it was last tick to where it will be next tick (it may be ticked before or after us).
+            Vec3 from = new Vec3(projectile.xo, projectile.yo, projectile.zo);
+            Vec3 to = projectile.position().add(projectile.getDeltaMovement());
+            double length = from.distanceTo(to);
+            if (length < 1.0E-4) {
+                continue; // lying still (an arrow stuck in the ground)
+            }
+            int steps = Math.max(1, (int) Math.ceil(length / 0.2));
+            BlockPos last = null;
+            for (int i = 0; i <= steps; i++) {
+                Vec3 point = from.lerp(to, (double) i / steps);
+                double dx = point.x - origin.x;
+                double dz = point.z - origin.z;
+                BlockPos cell = new BlockPos(
+                        Mth.floor(dx * cos - dz * sin + 0.5),
+                        Mth.floor(point.y - origin.y),
+                        Mth.floor(dx * sin + dz * cos + 0.5));
+                if (cell.equals(last)) {
+                    continue;
+                }
+                last = cell;
+                BlockState state = stateByPos.get(cell);
+                if (state == null) {
+                    continue;
+                }
+                if (!AirshipBalloons.isBalloon(state)) {
+                    break; // the hull shields what is behind it
+                }
+                if (AirshipBalloons.pops(state, projectile)) {
+                    popBalloon(level, cell, point);
+                    changed = true;
+                    // A Piercing arrow pops one more balloon per level, everything else stops at the first one.
+                    int left = projectileHits.getOrDefault(projectile.getId(), 1 + AirshipBalloons.piercingLevel(projectile)) - 1;
+                    projectileHits.put(projectile.getId(), left);
+                    if (left <= 0) {
+                        stopProjectile(projectile, true);
+                        break;
+                    }
+                } else {
+                    projectileHits.put(projectile.getId(), 0);
+                    stopProjectile(projectile, false); // too weak: it bounces off
+                    break;
+                }
+            }
+        }
+
+        if (changed) {
+            setCells(cellsWithoutPopped());
+            AirshipBlocksPayload payload = new AirshipBlocksPayload(getId(), clientCells(), getClientCushions(), getSeats());
+            for (ServerPlayer tracking : PlayerLookup.tracking(this)) {
+                ServerPlayNetworking.send(tracking, payload);
+            }
+        }
+    }
+
+    /** Cells that were popped this tick; removed (together with the current fuel) by {@link #cellsWithoutPopped}. */
+    private final List<BlockPos> popped = new ArrayList<>();
+
+    private void popBalloon(ServerLevel level, BlockPos cell, Vec3 where) {
+        stateByPos.remove(cell); // so the same projectile cannot pop it twice this tick
+        popped.add(cell);
+        level.playSound(null, where.x, where.y, where.z, SoundEvents.WOOL_BREAK, SoundSource.BLOCKS, 1.0F, 1.4F);
+        level.sendParticles(ParticleTypes.POOF, where.x, where.y, where.z, 8, 0.3, 0.3, 0.3, 0.02);
+    }
+
+    /** All cells with the current fuel, minus the popped balloons. */
+    private List<AirshipCell> cellsWithoutPopped() {
+        List<AirshipCell> result = getCellsWithFuel();
+        for (Iterator<AirshipCell> it = result.iterator(); it.hasNext(); ) {
+            if (popped.contains(it.next().pos())) {
+                it.remove();
+            }
+        }
+        popped.clear();
+        return result;
+    }
+
+    /**
+     * A projectile that was too weak bounces off. One that popped a balloon is used up, except tridents, which
+     * bounce back so that Loyalty still brings them home.
+     */
+    private static void stopProjectile(Projectile projectile, boolean popped) {
+        if (!popped || projectile.getType() == EntityType.TRIDENT) {
+            projectile.setDeltaMovement(projectile.getDeltaMovement().scale(-0.1));
+        } else {
+            projectile.discard();
         }
     }
 

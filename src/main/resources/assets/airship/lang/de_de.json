@@ -78,5 +78,11 @@
   "tooltip.airship.airship_engine_simple": "Rechtsklick: Treibstoff einfüllen.",
   "tooltip.airship.airship_engine_simple.2": "Langsamer, ohne Turbo und verbraucht doppelt so viel Treibstoff.",
   "screen.airship.engine.no_turbo": "Kein Turbo bei diesem Antrieb",
-  "screen.airship.engine.simple": "Einfacher Luftschiff-Antrieb"
+  "screen.airship.engine.simple": "Einfacher Luftschiff-Antrieb",
+  "block.airship.airship_balloon_reinforced": "Verstärkter Luftschiff-Ballon",
+  "tooltip.airship.airship_balloon.2": "Platzt bei Pfeilen, Dreizacken und Feuerbällen.",
+  "tooltip.airship.airship_balloon_simple.2": "Platzt bei jedem Projektil, auch bei Schneebällen.",
+  "tooltip.airship.airship_balloon_reinforced": "Trägt 5 Schiffsblöcke.",
+  "tooltip.airship.airship_balloon_reinforced.2": "Platzt nur bei Dreizacken und Armbrust-Pfeilen mit Durchschuss III.",
+  "message.airship.sinking": "Zu wenig Auftrieb: das Luftschiff sinkt!"
 }

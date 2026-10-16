@@ -78,5 +78,11 @@
   "tooltip.airship.airship_engine_simple": "Right-click: add fuel.",
   "tooltip.airship.airship_engine_simple.2": "Slower, no turbo, and burns twice as much fuel.",
   "screen.airship.engine.no_turbo": "No turbo with this engine",
-  "screen.airship.engine.simple": "Simple Airship Engine"
+  "screen.airship.engine.simple": "Simple Airship Engine",
+  "block.airship.airship_balloon_reinforced": "Reinforced Airship Balloon",
+  "tooltip.airship.airship_balloon.2": "Pops when hit by arrows, tridents or fireballs.",
+  "tooltip.airship.airship_balloon_simple.2": "Pops when hit by any projectile, even snowballs.",
+  "tooltip.airship.airship_balloon_reinforced": "Carries 5 ship blocks.",
+  "tooltip.airship.airship_balloon_reinforced.2": "Only pops from tridents and crossbow arrows with Piercing III.",
+  "message.airship.sinking": "Not enough lift: the airship is sinking!"
 }

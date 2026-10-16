@@ -33,6 +33,8 @@ public final class ModBlocks {
     public static final ResourceKey<Item> AIRSHIP_CORE_IRON_ITEM_KEY = itemKey("airship_core_iron");
     public static final ResourceKey<Block> AIRSHIP_BALLOON_SIMPLE_KEY = key("airship_balloon_simple");
     public static final ResourceKey<Item> AIRSHIP_BALLOON_SIMPLE_ITEM_KEY = itemKey("airship_balloon_simple");
+    public static final ResourceKey<Block> AIRSHIP_BALLOON_REINFORCED_KEY = key("airship_balloon_reinforced");
+    public static final ResourceKey<Item> AIRSHIP_BALLOON_REINFORCED_ITEM_KEY = itemKey("airship_balloon_reinforced");
     public static final ResourceKey<Block> AIRSHIP_ENGINE_SIMPLE_KEY = key("airship_engine_simple");
     public static final ResourceKey<Item> AIRSHIP_ENGINE_SIMPLE_ITEM_KEY = itemKey("airship_engine_simple");
 
@@ -50,9 +52,10 @@ public final class ModBlocks {
     public static final Block AIRSHIP_CORE = register(AIRSHIP_CORE_KEY, AirshipCoreBlock::new, BlockBehaviour.Properties.of().strength(3.0F, 6.0F).sound(SoundType.METAL).requiresCorrectToolForDrops());
     public static final Block AIRSHIP_CORE_WOOD = register(AIRSHIP_CORE_WOOD_KEY, AirshipCoreBlock::new, BlockBehaviour.Properties.of().strength(1.5F, 3.0F).sound(SoundType.WOOD));
     public static final Block AIRSHIP_CORE_IRON = register(AIRSHIP_CORE_IRON_KEY, AirshipCoreBlock::new, BlockBehaviour.Properties.of().strength(3.0F, 6.0F).sound(SoundType.METAL).requiresCorrectToolForDrops());
-    public static final Block AIRSHIP_BALLOON_SIMPLE = register(AIRSHIP_BALLOON_SIMPLE_KEY, Block::new, BlockBehaviour.Properties.of().strength(0.8F).sound(SoundType.WOOL));
+    public static final Block AIRSHIP_BALLOON_SIMPLE = register(AIRSHIP_BALLOON_SIMPLE_KEY, AirshipBalloonBlock::new, BlockBehaviour.Properties.of().strength(0.8F).sound(SoundType.WOOL));
     public static final Block AIRSHIP_ENGINE_SIMPLE = register(AIRSHIP_ENGINE_SIMPLE_KEY, AirshipEngineBlock::new, BlockBehaviour.Properties.of().strength(3.0F, 6.0F).sound(SoundType.METAL).requiresCorrectToolForDrops());
-    public static final Block AIRSHIP_BALLOON = register(AIRSHIP_BALLOON_KEY, Block::new, BlockBehaviour.Properties.of().strength(0.8F).sound(SoundType.WOOL));
+    public static final Block AIRSHIP_BALLOON = register(AIRSHIP_BALLOON_KEY, AirshipBalloonBlock::new, BlockBehaviour.Properties.of().strength(0.8F).sound(SoundType.WOOL));
+    public static final Block AIRSHIP_BALLOON_REINFORCED = register(AIRSHIP_BALLOON_REINFORCED_KEY, AirshipBalloonBlock::new, BlockBehaviour.Properties.of().strength(1.5F, 3.0F).sound(SoundType.WOOL));
     public static final Block AIRSHIP_ENGINE = register(AIRSHIP_ENGINE_KEY, AirshipEngineBlock::new, BlockBehaviour.Properties.of().strength(3.5F, 6.0F).sound(SoundType.METAL).requiresCorrectToolForDrops());
     public static final Block AIRSHIP_SEAT = register(AIRSHIP_SEAT_KEY, AirshipSeatBlock::new, BlockBehaviour.Properties.of().noOcclusion().strength(1.5F, 3.0F).sound(SoundType.WOOD));
     public static final Block AIRSHIP_BUILD = register(AIRSHIP_BUILD_KEY, AirshipBuildBlock::new, BlockBehaviour.Properties.of().noOcclusion().strength(0.5F).sound(SoundType.GRASS));
@@ -64,6 +67,7 @@ public final class ModBlocks {
         registerBlockItem(AIRSHIP_BALLOON_SIMPLE, AIRSHIP_BALLOON_SIMPLE_ITEM_KEY);
         registerBlockItem(AIRSHIP_ENGINE_SIMPLE, AIRSHIP_ENGINE_SIMPLE_ITEM_KEY);
         registerBlockItem(AIRSHIP_BALLOON, AIRSHIP_BALLOON_ITEM_KEY);
+        registerBlockItem(AIRSHIP_BALLOON_REINFORCED, AIRSHIP_BALLOON_REINFORCED_ITEM_KEY);
         registerBlockItem(AIRSHIP_ENGINE, AIRSHIP_ENGINE_ITEM_KEY);
         registerBlockItem(AIRSHIP_SEAT, AIRSHIP_SEAT_ITEM_KEY);
         registerBlockItem(AIRSHIP_BUILD, AIRSHIP_BUILD_ITEM_KEY);
@@ -93,7 +97,7 @@ public final class ModBlocks {
 
     /** Lift of a block: how many ship blocks it carries (0 for blocks that give none). */
     public static int liftOf(BlockState state) {
-        if (state.is(AIRSHIP_BALLOON)) {
+        if (state.is(AIRSHIP_BALLOON) || state.is(AIRSHIP_BALLOON_REINFORCED)) {
             return AirshipLift.BLOCKS_PER_BALLOON;
         }
         return state.is(AIRSHIP_BALLOON_SIMPLE) ? Math.min(SIMPLE_BALLOON_CARRY, AirshipLift.BLOCKS_PER_BALLOON) : 0;
@@ -125,6 +129,7 @@ public final class ModBlocks {
             entries.accept(AIRSHIP_BALLOON_SIMPLE.asItem());
             entries.accept(AIRSHIP_ENGINE_SIMPLE.asItem());
             entries.accept(AIRSHIP_BALLOON.asItem());
+            entries.accept(AIRSHIP_BALLOON_REINFORCED.asItem());
             entries.accept(AIRSHIP_ENGINE.asItem());
             entries.accept(AIRSHIP_SEAT.asItem());
             entries.accept(AIRSHIP_BUILD.asItem());

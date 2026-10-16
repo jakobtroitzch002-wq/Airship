@@ -25,9 +25,10 @@ public final class AirshipClient implements ClientModInitializer {
             "airship_core", 2,
             "airship_core_wood", 2,
             "airship_core_iron", 2,
-            "airship_balloon_simple", 1,
+            "airship_balloon_simple", 2,
+            "airship_balloon_reinforced", 2,
             "airship_engine_simple", 2,
-            "airship_balloon", 1,
+            "airship_balloon", 2,
             "airship_engine", 2,
             "airship_seat", 2,
             "airship_build", 2);
