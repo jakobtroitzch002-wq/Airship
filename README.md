@@ -116,6 +116,12 @@ All core limits are capped by `maxBlocks` from the config. The Core screen shows
 carry and how many are needed. A Simple Engine has no turbo tank, so its
 screen only has the fuel slot. Mixed ships work: speed is blended by how much of the engine power is fuelled.
 
+## Walking on a flying ship
+
+Players who are not seated can stand and walk on a flying ship: it moves and turns them along while they stand
+on it. A player who jumps off or falls off is left behind. When the ship is turned, its blocks are a little wider
+for walking (slight bumps at the edges).
+
 ## Shooting down balloons
 
 Projectiles pop balloons, placed ones and those of a flying ship (no drop):

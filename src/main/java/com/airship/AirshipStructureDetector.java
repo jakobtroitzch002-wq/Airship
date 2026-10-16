@@ -89,6 +89,15 @@ public final class AirshipStructureDetector {
      * @param ignored positions that are never added (terrain the ship touched when it last landed)
      */
     public static DetectionResult detect(Level level, BlockPos start, Set<BlockPos> ignored) {
+        return detect(level, start, ignored, MAX_BLOCKS);
+    }
+
+    /**
+     * Flood fill from {@code start}; stops with {@code capped} as soon as more than {@code limit} blocks are
+     * connected.
+     */
+    public static DetectionResult detect(Level level, BlockPos start, Set<BlockPos> ignored, int limit) {
+        int max = Math.min(limit, MAX_BLOCKS);
         Set<BlockPos> found = new HashSet<>();
         ArrayDeque<BlockPos> queue = new ArrayDeque<>();
         found.add(start.immutable());
@@ -105,7 +114,7 @@ public final class AirshipStructureDetector {
                 if (isIgnoredBlock(level.getBlockState(next))) {
                     continue;
                 }
-                if (found.size() >= MAX_BLOCKS) {
+                if (found.size() >= max) {
                     capped = true;
                     queue.clear();
                     break;

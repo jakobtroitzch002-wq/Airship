@@ -57,7 +57,7 @@
   "message.airship.no_core": "Kein Luftschiff-Kern verbunden",
   "message.airship.carried": "Tiere mitgenommen: %s von %s",
   "message.airship.cannot_land": "Luftschiff kann hier nicht landen: zu wenig Platz",
-  "problem.airship.capped": "Zu groß oder berührt das Gelände",
+  "problem.airship.capped": "Zu viele verbundene Blöcke: mehr als %s (berührt das Schiff den Boden?)",
   "problem.airship.too_big": "Zu groß: %s von %s Blöcken",
   "problem.airship.no_seat": "Kein Steuersitz",
   "problem.airship.many_seats": "Mehr als ein Steuersitz",

@@ -78,11 +78,18 @@ public final class AirshipAssembler {
                 ignored.add(corePos.offset(relative).immutable());
             }
         }
-        AirshipStructureDetector.DetectionResult detection = AirshipStructureDetector.detect(level, corePos, ignored);
         int max = ModBlocks.coreLimit(level.getBlockState(corePos));
+        // Search one block past the Core's limit: then we know the structure is too big without walking all of it.
+        AirshipStructureDetector.DetectionResult detection =
+                AirshipStructureDetector.detect(level, corePos, ignored, max);
         if (detection.capped()) {
+            // Too many connected blocks (or the ship touches the ground). Forget the old registration, so that
+            // the seat cannot launch an old, smaller part of the structure.
+            if (register && level.getBlockEntity(corePos) instanceof AirshipCoreBlockEntity coreEntity) {
+                coreEntity.setRegistered(List.of());
+            }
             return new AirshipCoreInfoPayload(
-                    corePos, false, problem("problem.airship.capped"), max, max, 0, 0, 0, 0, 0, 0, 0, 0);
+                    corePos, false, problem("problem.airship.capped", max), max + 1, max, 0, 0, 0, 0, 0, 0, 0, 0);
         }
 
         Set<BlockPos> found = detection.blocks();

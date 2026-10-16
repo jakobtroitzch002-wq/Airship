@@ -151,6 +151,19 @@ public final class AirshipClient implements ClientModInitializer {
             }
         });
 
+        // A player standing on a flying ship moves along with it (see AirshipShipColliders).
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (client.player == null || client.level == null || client.player.isPassenger()) {
+                return;
+            }
+            for (AirshipEntity ship : client.level.getEntitiesOfClass(
+                    AirshipEntity.class, client.player.getBoundingBox().inflate(64.0))) {
+                if (ship.carry(client.player)) {
+                    break;
+                }
+            }
+        });
+
         // While sitting in an airship, report the movement keys to the server.
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (client.player == null || !(client.player.getVehicle() instanceof AirshipEntity)) {

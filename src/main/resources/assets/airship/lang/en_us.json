@@ -57,7 +57,7 @@
   "message.airship.no_core": "No Airship Core connected",
   "message.airship.carried": "Animals carried: %s of %s",
   "message.airship.cannot_land": "The airship cannot land here: not enough space",
-  "problem.airship.capped": "Too big or touches the terrain",
+  "problem.airship.capped": "Too many connected blocks: more than %s (does the ship touch the ground?)",
   "problem.airship.too_big": "Too big: %s of %s blocks",
   "problem.airship.no_seat": "No control seat",
   "problem.airship.many_seats": "More than one control seat",

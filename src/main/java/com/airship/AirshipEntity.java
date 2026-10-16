@@ -29,12 +29,15 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.EmptyBlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 
 /**
  * An assembled airship. All blocks of the ship live inside this entity (relative to the former
@@ -351,6 +354,69 @@ public class AirshipEntity extends Entity {
             buildSurface();
         }
         return surfaceMask;
+    }
+
+    /**
+     * Collision boxes of the ship's outer blocks (where the ship is now) that touch the area. A block keeps the
+     * height of its own collision shape (slabs, carpets ...); when the ship is turned, its box is a little wider.
+     */
+    public void collisionShapes(AABB area, List<VoxelShape> out) {
+        Vec3 pos = position();
+        if (area.maxY < pos.y + minCellY || area.minY > pos.y + maxCellY + 2.0) {
+            return;
+        }
+        double angle = -Math.toRadians(getYRot());
+        double cos = Math.cos(angle);
+        double sin = Math.sin(angle);
+        double half = 0.5 * (Math.abs(cos) + Math.abs(sin));
+        for (BlockPos cell : surfaceCells()) {
+            double cx = pos.x + cell.getX() * cos + cell.getZ() * sin;
+            double cz = pos.z + cell.getZ() * cos - cell.getX() * sin;
+            if (cx + half < area.minX || cx - half > area.maxX || cz + half < area.minZ || cz - half > area.maxZ) {
+                continue;
+            }
+            BlockState state = stateByPos.get(cell);
+            if (state == null || ModBlocks.isAirshipBuildBlock(state.getBlock())) {
+                continue;
+            }
+            VoxelShape shape;
+            try {
+                shape = state.getCollisionShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO);
+            } catch (RuntimeException e) {
+                shape = Shapes.block();
+            }
+            if (shape.isEmpty()) {
+                continue;
+            }
+            double baseY = pos.y + cell.getY();
+            AABB box = new AABB(cx - half, baseY + shape.min(Direction.Axis.Y), cz - half,
+                    cx + half, baseY + shape.max(Direction.Axis.Y), cz + half);
+            if (box.intersects(area)) {
+                out.add(Shapes.create(box));
+            }
+        }
+    }
+
+    /**
+     * Client side, after the ship moved this tick: an entity standing on the ship moves and turns with it.
+     * Returns true if it was carried.
+     */
+    public boolean carry(Entity entity) {
+        if (!smoothReady || entity.isPassenger() || entity.getDeltaMovement().y > 0.2) {
+            return false;
+        }
+        float turn = Mth.wrapDegrees(curYaw - prevYaw);
+        if (curPos.equals(prevPos) && turn == 0.0F) {
+            return false;
+        }
+        if (!AirshipShipColliders.standsOn(this, entity)) {
+            return false;
+        }
+        Vec3 offset = entity.position().subtract(prevPos).yRot((float) -Math.toRadians(turn));
+        Vec3 target = curPos.add(offset);
+        entity.setPos(target.x, target.y, target.z);
+        entity.setYRot(entity.getYRot() + turn);
+        return true;
     }
 
     public int getFuel(BlockPos relativePos) {

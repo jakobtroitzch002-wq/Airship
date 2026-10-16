@@ -4,12 +4,21 @@
   "version": "${version}",
   "name": "Airship",
   "description": "A lightweight Fabric mod for player-built airships.",
-  "authors": ["jakobtroitzch002-wq"],
+  "authors": [
+    "jakobtroitzch002-wq"
+  ],
   "environment": "*",
   "entrypoints": {
-    "main": ["com.airship.AirshipMod"],
-    "client": ["com.airship.AirshipClient"]
+    "main": [
+      "com.airship.AirshipMod"
+    ],
+    "client": [
+      "com.airship.AirshipClient"
+    ]
   },
+  "mixins": [
+    "airship.mixins.json"
+  ],
   "depends": {
     "fabricloader": ">=0.19.5",
     "fabric-api": ">=0.161.0+26.3",
