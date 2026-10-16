@@ -108,7 +108,7 @@ Cushions (new in 26.3) are entities that players can sit on. On a ship they are 
 | Wooden Airship Core | holds ships of up to **25 blocks** | 4 logs (corners) + 4 planks around 1 iron ingot |
 | Iron Airship Core | holds ships of up to **100 blocks** | 8 iron ingots around a Wooden Airship Core |
 | Airship Core | holds ships of up to **500 blocks** | see Survival |
-| Simple Airship Balloon (makes 2) | carries only **3 ship blocks** (a Balloon carries 5), pops from **any** projectile | wool over a stick |
+| Simple Airship Balloon | carries only **3 ship blocks** (a Balloon carries 5), pops from **any** projectile | wool over a stick |
 | Reinforced Airship Balloon (makes 4) | like a Balloon, but only pops from **tridents** and **crossbow arrows with Piercing III** | 4 Balloons (corners) + 4 leather + 1 iron ingot (middle) |
 | Simple Airship Engine | gives **60 %** of the fuel speed boost, has **no turbo** and burns **twice the fuel** | iron ingot, cobblestone, furnace, 3 planks |
 
