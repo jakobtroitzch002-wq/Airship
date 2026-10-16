@@ -105,13 +105,14 @@ Cushions (new in 26.3) are entities that players can sit on. On a ship they are 
 
 | Part | Difference | Recipe |
 | --- | --- | --- |
-| Wooden Airship Core | holds ships of up to **25 blocks** | 8 planks around a compass |
-| Iron Airship Core | holds ships of up to **250 blocks** | 8 iron ingots around a compass |
-| Airship Core | holds ships up to the config limit (2000 by default) | see Survival |
-| Simple Airship Balloon (makes 2) | **half the lift**: two count as one Balloon | white wool, white wool, string (column) |
-| Simple Airship Engine | gives **60 %** of the fuel speed boost and has **no turbo** | 5 iron ingots + furnace (U shape, 2 rows) |
+| Wooden Airship Core | holds ships of up to **25 blocks** | 4 logs (corners) + 4 planks around 1 iron ingot |
+| Iron Airship Core | holds ships of up to **100 blocks** | 8 iron ingots around a Wooden Airship Core |
+| Airship Core | holds ships of up to **500 blocks** | see Survival |
+| Simple Airship Balloon (makes 2) | carries only **3 ship blocks** (a Balloon carries 5) | wool over a stick |
+| Simple Airship Engine | gives **60 %** of the fuel speed boost, has **no turbo** and burns **twice the fuel** | iron ingot, cobblestone, furnace, 3 planks |
 
-The Core screen shows lift in balloons (a Simple Balloon counts as 0.5). A Simple Engine has no turbo tank, so its
+All core limits are capped by `maxBlocks` from the config. The Core screen shows how many ship blocks the balloons
+carry and how many are needed. A Simple Engine has no turbo tank, so its
 screen only has the fuel slot. Mixed ships work: speed is blended by how much of the engine power is fuelled.
 
 ## Survival
@@ -122,7 +123,7 @@ All recipes are in the recipe book from the start, for every player (also in exi
 
 | Block | Recipe |
 | --- | --- |
-| Airship Core | 4 iron ingots + 4 gold ingots + compass (3x3, gold in the corners) |
+| Airship Core | Iron Airship Core in the middle, 4 compasses in the corners, 4 gold ingots on the sides |
 | Airship Balloon (makes 2) | wool, wool, string (in a column) |
 | Airship Seat | cushion, 3 planks in a row, leather (in a column) |
 | Airship Build Block (makes 4) | 4 iron nuggets around a glass pane (plus shape) |

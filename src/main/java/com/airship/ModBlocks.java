@@ -36,9 +36,10 @@ public final class ModBlocks {
     public static final ResourceKey<Block> AIRSHIP_ENGINE_SIMPLE_KEY = key("airship_engine_simple");
     public static final ResourceKey<Item> AIRSHIP_ENGINE_SIMPLE_ITEM_KEY = itemKey("airship_engine_simple");
 
-    /** Largest ship of the wooden and the iron Core (the normal Core uses the limit from the config). */
-    public static final int WOOD_CORE_BLOCKS = 50;
-    public static final int IRON_CORE_BLOCKS = 500;
+    /** Largest ship of each Core (never more than {@code maxBlocks} from the config). */
+    public static final int WOOD_CORE_BLOCKS = 25;
+    public static final int IRON_CORE_BLOCKS = 100;
+    public static final int CORE_BLOCKS = 500;
     /** Ship blocks a Simple Balloon carries (a normal Balloon carries {@code blocksPerBalloon} from the config). */
     public static final int SIMPLE_BALLOON_CARRY = 3;
     /** How much of the fuel speed boost a Simple Engine gives compared to the normal Engine. */
@@ -87,7 +88,7 @@ public final class ModBlocks {
         if (core.is(AIRSHIP_CORE_IRON)) {
             return Math.min(IRON_CORE_BLOCKS, AirshipStructureDetector.MAX_BLOCKS);
         }
-        return AirshipStructureDetector.MAX_BLOCKS;
+        return Math.min(CORE_BLOCKS, AirshipStructureDetector.MAX_BLOCKS);
     }
 
     /** Lift of a block: how many ship blocks it carries (0 for blocks that give none). */
