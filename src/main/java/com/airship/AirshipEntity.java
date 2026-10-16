@@ -23,6 +23,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.projectile.Projectile;
@@ -924,7 +925,7 @@ public class AirshipEntity extends Entity {
      * bounce back so that Loyalty still brings them home.
      */
     private static void stopProjectile(Projectile projectile, boolean popped) {
-        if (!popped || projectile.getType() == EntityType.TRIDENT) {
+        if (!popped || projectile.getType() == EntityTypes.TRIDENT) {
             projectile.setDeltaMovement(projectile.getDeltaMovement().scale(-0.1));
         } else {
             projectile.discard();

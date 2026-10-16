@@ -1,6 +1,7 @@
 package com.airship;
 
 import net.minecraft.core.Holder;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.EntityTypeTags;
@@ -46,10 +47,10 @@ public final class AirshipBalloons {
         if (balloon.is(ModBlocks.AIRSHIP_BALLOON_SIMPLE)) {
             return true;
         }
-        boolean strongest = projectile.getType().is(POPS_REINFORCED_BALLOON)
+        boolean strongest = hasTag(projectile, POPS_REINFORCED_BALLOON)
                 || piercingLevel(projectile) >= REINFORCED_PIERCING;
         if (balloon.is(ModBlocks.AIRSHIP_BALLOON)) {
-            return strongest || projectile.getType().is(POPS_BALLOON);
+            return strongest || hasTag(projectile, POPS_BALLOON);
         }
         if (balloon.is(ModBlocks.AIRSHIP_BALLOON_REINFORCED)) {
             return strongest;
@@ -57,9 +58,20 @@ public final class AirshipBalloons {
         return false;
     }
 
+    /** True if the projectile's entity type is in the tag. */
+    public static boolean hasTag(Projectile projectile, TagKey<EntityType<?>> tag) {
+        EntityType<?> type = projectile.getType();
+        for (Holder<EntityType<?>> holder : BuiltInRegistries.ENTITY_TYPE.getTagOrEmpty(tag)) {
+            if (holder.value() == type) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /** Piercing level of the crossbow an arrow was shot from (0 for everything else). */
     public static int piercingLevel(Projectile projectile) {
-        if (!projectile.getType().is(EntityTypeTags.ARROWS)) {
+        if (!hasTag(projectile, EntityTypeTags.ARROWS)) {
             return 0;
         }
         ItemStack weapon = projectile.getWeaponItem();
