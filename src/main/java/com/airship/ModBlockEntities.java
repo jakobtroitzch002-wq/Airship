@@ -16,7 +16,7 @@ public final class ModBlockEntities {
     public static final BlockEntityType<AirshipEngineBlockEntity> AIRSHIP_ENGINE = Registry.register(
             BuiltInRegistries.BLOCK_ENTITY_TYPE,
             Identifier.fromNamespaceAndPath(AirshipMod.MOD_ID, "airship_engine"),
-            FabricBlockEntityTypeBuilder.create(AirshipEngineBlockEntity::new, ModBlocks.AIRSHIP_ENGINE, ModBlocks.AIRSHIP_ENGINE_SIMPLE).build()
+            FabricBlockEntityTypeBuilder.create(AirshipEngineBlockEntity::new, ModBlocks.AIRSHIP_ENGINE, ModBlocks.AIRSHIP_ENGINE_SIMPLE, ModBlocks.AIRSHIP_ENGINE_ADVANCED).build()
     );
 
     public static final BlockEntityType<AirshipCoreBlockEntity> AIRSHIP_CORE = Registry.register(

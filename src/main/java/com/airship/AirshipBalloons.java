@@ -38,8 +38,7 @@ public final class AirshipBalloons {
     }
 
     public static boolean isBalloon(BlockState state) {
-        return state.is(ModBlocks.AIRSHIP_BALLOON_SIMPLE) || state.is(ModBlocks.AIRSHIP_BALLOON)
-                || state.is(ModBlocks.AIRSHIP_BALLOON_REINFORCED);
+        return ModBlocks.liftOf(state) > 0;
     }
 
     /** True if this projectile destroys this balloon. */
@@ -49,10 +48,10 @@ public final class AirshipBalloons {
         }
         boolean strongest = hasTag(projectile, POPS_REINFORCED_BALLOON)
                 || piercingLevel(projectile) >= REINFORCED_PIERCING;
-        if (balloon.is(ModBlocks.AIRSHIP_BALLOON)) {
+        if (balloon.is(ModBlocks.AIRSHIP_BALLOON) || balloon.is(ModBlocks.AIRSHIP_BALLOON_LARGE)) {
             return strongest || hasTag(projectile, POPS_BALLOON);
         }
-        if (balloon.is(ModBlocks.AIRSHIP_BALLOON_REINFORCED)) {
+        if (balloon.is(ModBlocks.AIRSHIP_BALLOON_REINFORCED) || balloon.is(ModBlocks.AIRSHIP_BALLOON_SKY)) {
             return strongest;
         }
         return false;

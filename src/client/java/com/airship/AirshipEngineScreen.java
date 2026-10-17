@@ -82,14 +82,15 @@ public class AirshipEngineScreen extends AbstractContainerScreen<AirshipEngineMe
                     (float) turbo / AirshipEngineBlockEntity.MAX_TURBO, AirshipGuiStyle.TURBO);
 
             // Stat tiles
-            tile(g, x + 10, y + 110, 88, tr("screen.airship.engine.tile_fuel"), speedText(AirshipEntity.FUEL_SPEED));
-            tile(g, x + 106, y + 110, 88, tr("screen.airship.engine.turbo"), speedText(AirshipEntity.TURBO_SPEED));
+            double boost = (AirshipEntity.FUEL_SPEED - AirshipEntity.BASE_SPEED) * (menu.getPower() - 1.0);
+            tile(g, x + 10, y + 110, 88, tr("screen.airship.engine.tile_fuel"), speedText(AirshipEntity.FUEL_SPEED + boost));
+            tile(g, x + 106, y + 110, 88, tr("screen.airship.engine.turbo"), speedText(AirshipEntity.TURBO_SPEED + boost));
         } else {
             // Simple Engine: no turbo tank, no turbo slot
             g.text(font, tr("screen.airship.engine.no_turbo"), x + 10, y + 76, AirshipGuiStyle.MUTED, false);
             tile(g, x + 10, y + 110, 194, tr("screen.airship.engine.tile_fuel"),
                     speedText(AirshipEntity.BASE_SPEED
-                            + (AirshipEntity.FUEL_SPEED - AirshipEntity.BASE_SPEED) * ModBlocks.SIMPLE_ENGINE_POWER));
+                            + (AirshipEntity.FUEL_SPEED - AirshipEntity.BASE_SPEED) * menu.getPower()));
         }
 
         // Inventory

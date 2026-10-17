@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "D": "minecraft:diamond",
+    "R": "minecraft:redstone_block",
+    "B": "minecraft:blaze_rod",
+    "E": "airship:airship_engine",
+    "F": "minecraft:blast_furnace"
+  },
+  "pattern": [
+    "DRD",
+    "BEB",
+    "DFD"
+  ],
+  "result": {
+    "id": "airship:airship_engine_advanced",
+    "count": 1
+  }
+}

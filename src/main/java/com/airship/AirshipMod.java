@@ -20,6 +20,7 @@ public final class AirshipMod implements ModInitializer {
         ModBlocks.initialize();
         FlammableBlockRegistry.getDefaultInstance().add(ModBlocks.AIRSHIP_BALLOON, 30, 60);
         FlammableBlockRegistry.getDefaultInstance().add(ModBlocks.AIRSHIP_BALLOON_SIMPLE, 30, 60);
+        FlammableBlockRegistry.getDefaultInstance().add(ModBlocks.AIRSHIP_BALLOON_LARGE, 30, 60);
         FlammableBlockRegistry.getDefaultInstance().add(ModBlocks.AIRSHIP_CORE_WOOD, 5, 20);
         FlammableBlockRegistry.getDefaultInstance().add(ModBlocks.AIRSHIP_SEAT, 5, 20);
         ModBlockEntities.initialize();

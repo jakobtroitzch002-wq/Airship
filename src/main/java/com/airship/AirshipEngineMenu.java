@@ -31,7 +31,7 @@ public class AirshipEngineMenu extends AbstractContainerMenu {
 
     /** Client side. */
     public AirshipEngineMenu(int containerId, Inventory inventory) {
-        this(containerId, inventory, null, new SimpleContainerData(3));
+        this(containerId, inventory, null, new SimpleContainerData(4));
     }
 
     /** Server side. */
@@ -88,6 +88,12 @@ public class AirshipEngineMenu extends AbstractContainerMenu {
     /** False for the Simple Engine: it has no turbo tank. */
     public boolean canTurbo() {
         return data.get(2) != 0;
+    }
+
+    /** Share of the fuel speed boost this engine gives (Simple 0.6, normal 1, Advanced 1.6). */
+    public double getPower() {
+        int percent = data.get(3);
+        return percent <= 0 ? 1.0 : percent / 100.0;
     }
 
     /** Remaining fuel of the normal tank, in ticks of thrust. */

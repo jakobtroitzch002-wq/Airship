@@ -24,7 +24,9 @@
             "items": [
               "airship:airship_balloon",
               "airship:airship_balloon_simple",
-              "airship:airship_balloon_reinforced"
+              "airship:airship_balloon_reinforced",
+              "airship:airship_balloon_large",
+              "airship:airship_balloon_sky"
             ]
           }
         ]

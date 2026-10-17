@@ -13,13 +13,16 @@
   "rewards": {
     "recipes": [
       "airship:airship_balloon",
+      "airship:airship_balloon_large",
       "airship:airship_balloon_reinforced",
       "airship:airship_balloon_simple",
+      "airship:airship_balloon_sky",
       "airship:airship_build",
       "airship:airship_core",
       "airship:airship_core_iron",
       "airship:airship_core_wood",
       "airship:airship_engine",
+      "airship:airship_engine_advanced",
       "airship:airship_engine_simple",
       "airship:airship_seat"
     ]

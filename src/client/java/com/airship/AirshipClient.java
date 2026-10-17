@@ -28,17 +28,20 @@ public final class AirshipClient implements ClientModInitializer {
     private static int carriedShip = -1;
     private static int ticksOffShip = 1000;
 
-    private static final java.util.Map<String, Integer> TOOLTIP_LINES = java.util.Map.of(
-            "airship_core", 2,
-            "airship_core_wood", 2,
-            "airship_core_iron", 2,
-            "airship_balloon_simple", 2,
-            "airship_balloon_reinforced", 2,
-            "airship_engine_simple", 2,
-            "airship_balloon", 2,
-            "airship_engine", 2,
-            "airship_seat", 2,
-            "airship_build", 2);
+    private static final java.util.Map<String, Integer> TOOLTIP_LINES = java.util.Map.ofEntries(
+            java.util.Map.entry("airship_core", 2),
+            java.util.Map.entry("airship_core_wood", 2),
+            java.util.Map.entry("airship_core_iron", 2),
+            java.util.Map.entry("airship_balloon_simple", 2),
+            java.util.Map.entry("airship_balloon_reinforced", 2),
+            java.util.Map.entry("airship_balloon_large", 2),
+            java.util.Map.entry("airship_balloon_sky", 2),
+            java.util.Map.entry("airship_engine_simple", 2),
+            java.util.Map.entry("airship_engine_advanced", 2),
+            java.util.Map.entry("airship_balloon", 2),
+            java.util.Map.entry("airship_engine", 2),
+            java.util.Map.entry("airship_seat", 2),
+            java.util.Map.entry("airship_build", 2));
 
     /**
      * Descending has its own key (default C, rebindable) instead of the sprint key: the sprint key can

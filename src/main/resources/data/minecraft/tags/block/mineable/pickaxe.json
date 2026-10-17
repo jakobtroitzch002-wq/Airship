@@ -4,6 +4,7 @@
     "airship:airship_core",
     "airship:airship_engine",
     "airship:airship_core_iron",
-    "airship:airship_engine_simple"
+    "airship:airship_engine_simple",
+    "airship:airship_engine_advanced"
   ]
 }

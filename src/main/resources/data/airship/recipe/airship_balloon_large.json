@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "M": "minecraft:phantom_membrane",
+    "W": "#minecraft:wool",
+    "B": "airship:airship_balloon"
+  },
+  "pattern": [
+    "MWM",
+    "WBW",
+    "MWM"
+  ],
+  "result": {
+    "id": "airship:airship_balloon_large",
+    "count": 1
+  }
+}

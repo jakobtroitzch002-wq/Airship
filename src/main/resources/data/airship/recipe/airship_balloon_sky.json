@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "D": "minecraft:diamond",
+    "L": "minecraft:leather",
+    "B": "airship:airship_balloon_large"
+  },
+  "pattern": [
+    "DLD",
+    "LBL",
+    "DLD"
+  ],
+  "result": {
+    "id": "airship:airship_balloon_sky",
+    "count": 1
+  }
+}

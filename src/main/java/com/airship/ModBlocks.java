@@ -35,6 +35,12 @@ public final class ModBlocks {
     public static final ResourceKey<Item> AIRSHIP_BALLOON_SIMPLE_ITEM_KEY = itemKey("airship_balloon_simple");
     public static final ResourceKey<Block> AIRSHIP_BALLOON_REINFORCED_KEY = key("airship_balloon_reinforced");
     public static final ResourceKey<Item> AIRSHIP_BALLOON_REINFORCED_ITEM_KEY = itemKey("airship_balloon_reinforced");
+    public static final ResourceKey<Block> AIRSHIP_BALLOON_LARGE_KEY = key("airship_balloon_large");
+    public static final ResourceKey<Item> AIRSHIP_BALLOON_LARGE_ITEM_KEY = itemKey("airship_balloon_large");
+    public static final ResourceKey<Block> AIRSHIP_BALLOON_SKY_KEY = key("airship_balloon_sky");
+    public static final ResourceKey<Item> AIRSHIP_BALLOON_SKY_ITEM_KEY = itemKey("airship_balloon_sky");
+    public static final ResourceKey<Block> AIRSHIP_ENGINE_ADVANCED_KEY = key("airship_engine_advanced");
+    public static final ResourceKey<Item> AIRSHIP_ENGINE_ADVANCED_ITEM_KEY = itemKey("airship_engine_advanced");
     public static final ResourceKey<Block> AIRSHIP_ENGINE_SIMPLE_KEY = key("airship_engine_simple");
     public static final ResourceKey<Item> AIRSHIP_ENGINE_SIMPLE_ITEM_KEY = itemKey("airship_engine_simple");
 
@@ -46,6 +52,8 @@ public final class ModBlocks {
     public static final int SIMPLE_BALLOON_CARRY = 3;
     /** How much of the fuel speed boost a Simple Engine gives compared to the normal Engine. */
     public static final double SIMPLE_ENGINE_POWER = 0.6;
+    /** How much of the fuel speed boost an Advanced Engine gives compared to the normal Engine. */
+    public static final double ADVANCED_ENGINE_POWER = 1.6;
     /** A Simple Engine burns this many ticks of fuel per tick of thrust (the normal Engine burns 1). */
     public static final int SIMPLE_ENGINE_BURN_RATE = 2;
 
@@ -55,6 +63,9 @@ public final class ModBlocks {
     public static final Block AIRSHIP_BALLOON_SIMPLE = register(AIRSHIP_BALLOON_SIMPLE_KEY, AirshipBalloonBlock::new, BlockBehaviour.Properties.of().strength(0.8F).sound(SoundType.WOOL));
     public static final Block AIRSHIP_ENGINE_SIMPLE = register(AIRSHIP_ENGINE_SIMPLE_KEY, AirshipEngineBlock::new, BlockBehaviour.Properties.of().strength(3.0F, 6.0F).sound(SoundType.METAL).requiresCorrectToolForDrops());
     public static final Block AIRSHIP_BALLOON = register(AIRSHIP_BALLOON_KEY, AirshipBalloonBlock::new, BlockBehaviour.Properties.of().strength(0.8F).sound(SoundType.WOOL));
+    public static final Block AIRSHIP_BALLOON_LARGE = register(AIRSHIP_BALLOON_LARGE_KEY, AirshipBalloonBlock::new, BlockBehaviour.Properties.of().strength(0.8F).sound(SoundType.WOOL));
+    public static final Block AIRSHIP_BALLOON_SKY = register(AIRSHIP_BALLOON_SKY_KEY, AirshipBalloonBlock::new, BlockBehaviour.Properties.of().strength(2.0F, 4.0F).sound(SoundType.WOOL));
+    public static final Block AIRSHIP_ENGINE_ADVANCED = register(AIRSHIP_ENGINE_ADVANCED_KEY, AirshipEngineBlock::new, BlockBehaviour.Properties.of().strength(4.0F, 8.0F).sound(SoundType.METAL).requiresCorrectToolForDrops());
     public static final Block AIRSHIP_BALLOON_REINFORCED = register(AIRSHIP_BALLOON_REINFORCED_KEY, AirshipBalloonBlock::new, BlockBehaviour.Properties.of().strength(1.5F, 3.0F).sound(SoundType.WOOL));
     public static final Block AIRSHIP_ENGINE = register(AIRSHIP_ENGINE_KEY, AirshipEngineBlock::new, BlockBehaviour.Properties.of().strength(3.5F, 6.0F).sound(SoundType.METAL).requiresCorrectToolForDrops());
     public static final Block AIRSHIP_SEAT = register(AIRSHIP_SEAT_KEY, AirshipSeatBlock::new, BlockBehaviour.Properties.of().noOcclusion().strength(1.5F, 3.0F).sound(SoundType.WOOD));
@@ -68,6 +79,9 @@ public final class ModBlocks {
         registerBlockItem(AIRSHIP_ENGINE_SIMPLE, AIRSHIP_ENGINE_SIMPLE_ITEM_KEY);
         registerBlockItem(AIRSHIP_BALLOON, AIRSHIP_BALLOON_ITEM_KEY);
         registerBlockItem(AIRSHIP_BALLOON_REINFORCED, AIRSHIP_BALLOON_REINFORCED_ITEM_KEY);
+        registerBlockItem(AIRSHIP_BALLOON_LARGE, AIRSHIP_BALLOON_LARGE_ITEM_KEY);
+        registerBlockItem(AIRSHIP_BALLOON_SKY, AIRSHIP_BALLOON_SKY_ITEM_KEY);
+        registerBlockItem(AIRSHIP_ENGINE_ADVANCED, AIRSHIP_ENGINE_ADVANCED_ITEM_KEY);
         registerBlockItem(AIRSHIP_ENGINE, AIRSHIP_ENGINE_ITEM_KEY);
         registerBlockItem(AIRSHIP_SEAT, AIRSHIP_SEAT_ITEM_KEY);
         registerBlockItem(AIRSHIP_BUILD, AIRSHIP_BUILD_ITEM_KEY);
@@ -97,6 +111,12 @@ public final class ModBlocks {
 
     /** Lift of a block: how many ship blocks it carries (0 for blocks that give none). */
     public static int liftOf(BlockState state) {
+        if (state.is(AIRSHIP_BALLOON_LARGE)) {
+            return AirshipLift.BLOCKS_PER_BALLOON * 8 / 5; // 8 with the default of 5
+        }
+        if (state.is(AIRSHIP_BALLOON_SKY)) {
+            return AirshipLift.BLOCKS_PER_BALLOON * 12 / 5; // 12 with the default of 5
+        }
         if (state.is(AIRSHIP_BALLOON) || state.is(AIRSHIP_BALLOON_REINFORCED)) {
             return AirshipLift.BLOCKS_PER_BALLOON;
         }
@@ -104,11 +124,14 @@ public final class ModBlocks {
     }
 
     public static boolean isEngine(BlockState state) {
-        return state.is(AIRSHIP_ENGINE) || state.is(AIRSHIP_ENGINE_SIMPLE);
+        return state.is(AIRSHIP_ENGINE) || state.is(AIRSHIP_ENGINE_SIMPLE) || state.is(AIRSHIP_ENGINE_ADVANCED);
     }
 
     /** Share of the fuel speed boost that this engine gives. */
     public static double enginePower(BlockState state) {
+        if (state.is(AIRSHIP_ENGINE_ADVANCED)) {
+            return ADVANCED_ENGINE_POWER;
+        }
         return state.is(AIRSHIP_ENGINE_SIMPLE) ? SIMPLE_ENGINE_POWER : 1.0;
     }
 
@@ -118,7 +141,7 @@ public final class ModBlocks {
     }
 
     public static boolean engineHasTurbo(BlockState state) {
-        return state.is(AIRSHIP_ENGINE);
+        return state.is(AIRSHIP_ENGINE) || state.is(AIRSHIP_ENGINE_ADVANCED);
     }
 
     public static void initialize() {
@@ -130,7 +153,10 @@ public final class ModBlocks {
             entries.accept(AIRSHIP_ENGINE_SIMPLE.asItem());
             entries.accept(AIRSHIP_BALLOON.asItem());
             entries.accept(AIRSHIP_BALLOON_REINFORCED.asItem());
+            entries.accept(AIRSHIP_BALLOON_LARGE.asItem());
+            entries.accept(AIRSHIP_BALLOON_SKY.asItem());
             entries.accept(AIRSHIP_ENGINE.asItem());
+            entries.accept(AIRSHIP_ENGINE_ADVANCED.asItem());
             entries.accept(AIRSHIP_SEAT.asItem());
             entries.accept(AIRSHIP_BUILD.asItem());
         });

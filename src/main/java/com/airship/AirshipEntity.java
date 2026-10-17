@@ -767,6 +767,9 @@ public class AirshipEntity extends Entity {
                 if (index == 2) {
                     return hasTurbo ? 1 : 0;
                 }
+                if (index == 3) {
+                    return (int) Math.round(ModBlocks.enginePower(state) * 100.0);
+                }
                 return (index == 0 ? tank.getFuel() : tank.getTurbo()) / 20; // seconds, see AirshipEngineBlockEntity
             }
 
@@ -776,7 +779,7 @@ public class AirshipEntity extends Entity {
 
             @Override
             public int getCount() {
-                return 3;
+                return 4;
             }
         };
         player.openMenu(new SimpleMenuProvider(
@@ -1131,7 +1134,8 @@ public class AirshipEntity extends Entity {
         for (Map.Entry<BlockPos, Integer> entry : engineFuel.entrySet()) {
             if (wantBoost && turboFuel.getOrDefault(entry.getKey(), 0) > 0) {
                 turboActive++;
-                activePower += 1.0;
+                BlockState turboState = stateByPos.get(entry.getKey());
+                activePower += turboState == null ? 1.0 : ModBlocks.enginePower(turboState);
             } else if (entry.getValue() > 0) {
                 normalActive++;
                 BlockState engineState = stateByPos.get(entry.getKey());

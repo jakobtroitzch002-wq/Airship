@@ -88,5 +88,14 @@
   "screen.airship.core.align": "Am Raster ausrichten (zum Umbauen)",
   "screen.airship.core.flying": "In der Luft",
   "screen.airship.core.flying_hint1": "Ausrichten: das Schiff wird hier zu Blöcken.",
-  "screen.airship.core.flying_hint2": "Danach umbauen, prüfen und wieder hinsetzen."
+  "screen.airship.core.flying_hint2": "Danach umbauen, prüfen und wieder hinsetzen.",
+  "block.airship.airship_balloon_large": "Großer Luftschiff-Ballon",
+  "tooltip.airship.airship_balloon_large": "Trägt 8 Schiffsblöcke.",
+  "tooltip.airship.airship_balloon_large.2": "Platzt bei Pfeilen, Dreizacken und Feuerbällen.",
+  "block.airship.airship_balloon_sky": "Himmels-Ballon",
+  "tooltip.airship.airship_balloon_sky": "Trägt 12 Schiffsblöcke.",
+  "tooltip.airship.airship_balloon_sky.2": "Platzt nur bei Dreizacken und Armbrust-Pfeilen mit Durchschuss III.",
+  "block.airship.airship_engine_advanced": "Verbesserter Luftschiff-Antrieb",
+  "tooltip.airship.airship_engine_advanced": "Rechtsklick: Treibstoff einfüllen.",
+  "tooltip.airship.airship_engine_advanced.2": "Deutlich schneller als der Luftschiff-Antrieb, mit Turbo."
 }
