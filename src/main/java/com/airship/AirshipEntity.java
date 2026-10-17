@@ -83,6 +83,8 @@ public class AirshipEntity extends Entity {
     private int requiredLift;
     /** Largest horizontal distance of a cell from the origin, used to find projectiles near the ship. */
     private double radius;
+    /** Server only: the ship rests on the ground (then it turns into blocks as soon as nobody steers it). */
+    private boolean resting;
     /** Server only: projectiles that already hit a balloon -> how many more balloons they may pop. */
     private final Map<Integer, Integer> projectileHits = new HashMap<>();
 
@@ -507,7 +509,68 @@ public class AirshipEntity extends Entity {
         if (seats.isEmpty()) {
             return super.getDismountLocationForPassenger(passenger);
         }
-        return landingSpot(passenger);
+        // A ship on the ground turns into blocks when its pilot leaves: put everybody on its landed spot.
+        // A hovering ship stays where it is: the passenger stands up right where it sat.
+        ServerPlayer pilot = findPilot();
+        if (resting && (pilot == null || pilot == passenger)) {
+            return landingSpot(passenger);
+        }
+        return position().add(toWorldOffset(seatOf(passenger)));
+    }
+
+    private Vec3 seatOf(Entity passenger) {
+        Integer assigned = seatByPassenger.get(passenger.getId());
+        int index = assigned != null ? assigned : Math.max(0, getPassengers().indexOf(passenger));
+        return seats.get(index % seats.size());
+    }
+
+    /**
+     * A player wants to steer this hovering ship (right-click on its Airship Seat). Works if nobody steers it,
+     * there is a free seat and the player is close to the seat.
+     */
+    public void board(ServerPlayer player) {
+        if (seats.isEmpty() || player.isPassenger() || findPilot() != null || !canAddPassenger(player)) {
+            return;
+        }
+        Vec3 seat = position().add(toWorldOffset(seats.get(0)));
+        if (player.distanceToSqr(seat) > 36.0) {
+            return;
+        }
+        seatByPassenger.values().removeIf(index -> index == 0); // whoever steered before has left
+        if (!player.startRiding(this, true, true)) {
+            return;
+        }
+        seatByPassenger.put(player.getId(), 0);
+        velocity = Vec3.ZERO;
+        AirshipSeatMapPayload seatMap = seatMapPayload();
+        for (ServerPlayer tracking : PlayerLookup.tracking(this)) {
+            ServerPlayNetworking.send(tracking, seatMap);
+        }
+    }
+
+    /**
+     * Client side: the Airship Seat cell the player looks at within {@code reach} blocks, or -1 if the view hits
+     * another block of the ship first (or nothing). Returns the distance to the seat.
+     */
+    public double seatDistance(Vec3 eye, Vec3 look, double reach) {
+        Vec3 origin = position();
+        double angle = -Math.toRadians(getYRot());
+        double cos = Math.cos(angle);
+        double sin = Math.sin(angle);
+        for (double d = 0.0; d <= reach; d += 0.05) {
+            Vec3 point = eye.add(look.scale(d));
+            double dx = point.x - origin.x;
+            double dz = point.z - origin.z;
+            BlockPos cell = new BlockPos(
+                    Mth.floor(dx * cos - dz * sin + 0.5),
+                    Mth.floor(point.y - origin.y),
+                    Mth.floor(dx * sin + dz * cos + 0.5));
+            BlockState state = stateByPos.get(cell);
+            if (state != null) {
+                return state.is(ModBlocks.AIRSHIP_SEAT) ? d : -1.0;
+            }
+        }
+        return -1.0;
     }
 
     /**
@@ -703,9 +766,15 @@ public class AirshipEntity extends Entity {
             return;
         }
 
-        // Without a pilot on the control seat the ship turns back into solid blocks
-        // (passengers on cushions are put down on their cushions).
+        resting = AirshipCollision.collides(level, this, position().add(0.0, -0.05, 0.0), getYRot());
+
+        // Without a pilot on the control seat the ship stays where it is, hovering. Only when it rests on the
+        // ground does it turn back into solid blocks (passengers on cushions are put down on their cushions).
         ServerPlayer pilot = findPilot();
+        if (pilot == null && !resting) {
+            hoverTick(level);
+            return;
+        }
         if (pilot == null) {
             velocity = Vec3.ZERO;
             if (landCooldown > 0) {
@@ -879,6 +948,26 @@ public class AirshipEntity extends Entity {
                     fuelMax, turboMax, engineFuel.size(), activeEngines,
                     (float) (velocity.length() * 20.0), turboActive > 0));
         }
+    }
+
+    /**
+     * A ship nobody steers: it stays in the air. Without enough lift (balloons shot down) it slowly sinks until
+     * it rests on the ground, where it lands.
+     */
+    private void hoverTick(ServerLevel level) {
+        velocity = Vec3.ZERO;
+        if (lift < requiredLift) {
+            AirshipCollision.Result result = AirshipCollision.move(level, this, position(), new Vec3(0.0, -SINK_SPEED, 0.0));
+            Vec3 newPos = result.pos();
+            double lowest = level.getMinY() + 1 - minCellY;
+            setPos(newPos.x, Math.max(lowest, newPos.y), newPos.z);
+            if (!result.hitY()) {
+                velocity = new Vec3(0.0, -SINK_SPEED, 0.0);
+            }
+        }
+        setDeltaMovement(velocity);
+        checkProjectiles(level);
+        broadcastState(level);
     }
 
     // ------------------------------------------------------------------ projectiles

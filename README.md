@@ -23,9 +23,12 @@ A Fabric mod for player-built airships in Minecraft 26.3.
    - `Space` ascend, `C` descend (rebindable under Controls, "Airship: descend")
 4. **Passengers:** sit on a cushion before takeoff and you stay on it while the ship flies. Passengers cannot steer.
    Everybody who is not the pilot needs a cushion.
-5. **Land:** press `Shift` to leave the Airship Seat. The ship turns back into solid blocks right where it is
+5. **Get off:** press `Shift` to leave the Airship Seat. In the air the ship **stays exactly where it is**, hovering,
+   and you stand on it (passengers can stay seated). Right-click its Airship Seat to steer it again.
+6. **Land:** fly down until the ship rests on the ground, then get off. Only then does it turn back into solid blocks
    (snapped to the block grid and to the nearest 90 degrees). Passengers on cushions are put down on their cushion.
-   Rebuild whatever you like and sit down again.
+   Rebuild whatever you like and sit down again. A hovering ship without enough lift (balloons shot down) slowly
+   sinks and lands by itself.
 
 ### Landing next to the ground or a wall
 

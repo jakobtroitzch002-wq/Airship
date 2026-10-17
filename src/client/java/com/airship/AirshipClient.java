@@ -18,6 +18,8 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 
 public final class AirshipClient implements ClientModInitializer {
     /** How many tooltip lines each item has (the texts are in the language files). */
@@ -148,6 +150,41 @@ public final class AirshipClient implements ClientModInitializer {
                             ? "Glas-Modus: nach dem Wasser gezeichnet"
                             : "Glas-Modus: normal gezeichnet"));
                 }
+            }
+        });
+
+        // Right-click on the Airship Seat of a hovering ship: steer it again. The ship's blocks are not real
+        // blocks, so the click is checked here (before the game handles it) against the ship's own grid.
+        ClientTickEvents.START_CLIENT_TICK.register(client -> {
+            if (client.player == null || client.level == null || client.player.isPassenger()
+                    || client.gui.screen() != null) {
+                return;
+            }
+            Vec3 eye = client.player.getEyePosition();
+            Vec3 look = client.player.getViewVector(1.0F);
+            AirshipEntity target = null;
+            double best = Double.MAX_VALUE;
+            for (AirshipEntity ship : client.level.getEntitiesOfClass(
+                    AirshipEntity.class, client.player.getBoundingBox().inflate(64.0))) {
+                double distance = ship.seatDistance(eye, look, 4.5);
+                if (distance >= 0.0 && distance < best) {
+                    best = distance;
+                    target = ship;
+                }
+            }
+            if (target == null) {
+                return;
+            }
+            HitResult hit = client.hitResult;
+            if (hit != null && hit.getType() != HitResult.Type.MISS && hit.getLocation().distanceTo(eye) < best) {
+                return; // a real block or entity is in front of the seat
+            }
+            boolean clicked = false;
+            while (client.options.keyUse.consumeClick()) {
+                clicked = true;
+            }
+            if (clicked) {
+                ClientPlayNetworking.send(new AirshipBoardPayload(target.getId()));
             }
         });
 
