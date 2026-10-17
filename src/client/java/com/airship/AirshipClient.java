@@ -174,6 +174,7 @@ public final class AirshipClient implements ClientModInitializer {
                 ship.clientAdvance();
             }
 
+            AirshipShipColliders.flushCarry(client.player);
             int result = AirshipEntity.CARRY_NONE;
             if (!client.player.isPassenger()) {
                 for (AirshipEntity ship : ships) {

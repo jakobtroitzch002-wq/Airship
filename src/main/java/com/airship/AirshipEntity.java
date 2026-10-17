@@ -361,45 +361,148 @@ public class AirshipEntity extends Entity {
         return surfaceMask;
     }
 
+    // ------------------------------------------------------------------ walking on the ship (client)
+
+    /** Collision shapes of the ship's block types, at the origin (looked up once per block state). */
+    private static final Map<BlockState, VoxelShape> SHAPES = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private static VoxelShape shapeOf(BlockState state) {
+        return SHAPES.computeIfAbsent(state, s -> {
+            if (ModBlocks.isAirshipBuildBlock(s.getBlock())) {
+                return Shapes.empty();
+            }
+            try {
+                return s.getCollisionShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO);
+            } catch (RuntimeException e) {
+                return Shapes.block();
+            }
+        });
+    }
+
+    /** A world offset turned into the ship's own (unrotated) grid. */
+    private Vec3 toLocal(Vec3 world) {
+        double angle = -Math.toRadians(getYRot());
+        double cos = Math.cos(angle);
+        double sin = Math.sin(angle);
+        return new Vec3(world.x * cos - world.z * sin, world.y, world.x * sin + world.z * cos);
+    }
+
     /**
-     * Collision boxes of the ship's outer blocks (where the ship is now) that touch the area. A block keeps the
-     * height of its own collision shape (slabs, carpets ...); when the ship is turned, its box is a little wider.
+     * An entity's box in the ship's grid. Cells are centred on whole numbers there (a cell spans x-0.5..x+0.5),
+     * heights stay the same. The footprint of a player is a square, so it keeps its size when turned.
      */
-    public void collisionShapes(AABB area, List<VoxelShape> out) {
-        Vec3 pos = position();
-        if (area.maxY < pos.y + minCellY || area.minY > pos.y + maxCellY + 2.0) {
-            return;
+    private AABB toLocalBox(AABB world) {
+        Vec3 center = toLocal(world.getCenter().subtract(position()));
+        double half = Math.max(world.getXsize(), world.getZsize()) / 2.0;
+        double baseY = position().y;
+        return new AABB(center.x - half, world.minY - baseY, center.z - half,
+                center.x + half, world.maxY - baseY, center.z + half);
+    }
+
+    /** The exact collision shapes (in the ship's grid) of the cells that touch the local box. */
+    private List<VoxelShape> localShapes(AABB local) {
+        List<VoxelShape> out = new ArrayList<>();
+        int x0 = Mth.floor(local.minX + 0.5);
+        int x1 = Mth.floor(local.maxX + 0.5);
+        int y0 = Math.max(minCellY, Mth.floor(local.minY) - 1); // fences and walls reach 1.5 blocks up
+        int y1 = Math.min(maxCellY, Mth.floor(local.maxY));
+        int z0 = Mth.floor(local.minZ + 0.5);
+        int z1 = Mth.floor(local.maxZ + 0.5);
+        if ((long) (x1 - x0 + 1) * (y1 - y0 + 1) * (z1 - z0 + 1) > 4096) {
+            return out; // never happens for a player; guards against huge boxes
+        }
+        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+        for (int x = x0; x <= x1; x++) {
+            for (int y = y0; y <= y1; y++) {
+                for (int z = z0; z <= z1; z++) {
+                    BlockState state = stateByPos.get(cursor.set(x, y, z));
+                    if (state == null) {
+                        continue;
+                    }
+                    VoxelShape shape = shapeOf(state);
+                    if (!shape.isEmpty()) {
+                        out.add(shape.move(x - 0.5, y, z - 0.5));
+                    }
+                }
+            }
+        }
+        return out;
+    }
+
+    /** Same order as Minecraft: up/down first, then the larger of the two sideways directions. */
+    private static Vec3 collideAxes(Vec3 movement, AABB box, List<VoxelShape> shapes) {
+        double x = movement.x;
+        double y = movement.y;
+        double z = movement.z;
+        if (y != 0.0) {
+            y = Shapes.collide(Direction.Axis.Y, box, shapes, y);
+            if (y != 0.0) {
+                box = box.move(0.0, y, 0.0);
+            }
+        }
+        boolean zFirst = Math.abs(x) < Math.abs(z);
+        if (zFirst && z != 0.0) {
+            z = Shapes.collide(Direction.Axis.Z, box, shapes, z);
+            if (z != 0.0) {
+                box = box.move(0.0, 0.0, z);
+            }
+        }
+        if (x != 0.0) {
+            x = Shapes.collide(Direction.Axis.X, box, shapes, x);
+            if (!zFirst && x != 0.0) {
+                box = box.move(x, 0.0, 0.0);
+            }
+        }
+        if (!zFirst && z != 0.0) {
+            z = Shapes.collide(Direction.Axis.Z, box, shapes, z);
+        }
+        return new Vec3(x, y, z);
+    }
+
+    /**
+     * Client side: limits an entity's movement (already checked against the world) by the ship's blocks, with
+     * their exact shapes in the ship's own rotated grid. Includes stepping up onto slabs and block edges.
+     */
+    public Vec3 collideEntity(Entity entity, AABB worldBox, Vec3 movement) {
+        AABB box = toLocalBox(worldBox);
+        Vec3 local = toLocal(movement);
+        double step = Math.max(0.0, entity.maxUpStep());
+        List<VoxelShape> shapes = localShapes(box.expandTowards(local).inflate(step + 0.1));
+        if (shapes.isEmpty()) {
+            return movement;
+        }
+        Vec3 result = collideAxes(local, box, shapes);
+
+        boolean blockedSideways = result.x != local.x || result.z != local.z;
+        boolean grounded = entity.onGround() || (local.y < 0.0 && result.y != local.y);
+        if (step > 0.0 && blockedSideways && grounded) {
+            Vec3 stepped = collideAxes(new Vec3(local.x, step, local.z), box, shapes);
+            double down = Shapes.collide(Direction.Axis.Y, box.move(stepped), shapes, -stepped.y + Math.min(0.0, local.y));
+            stepped = stepped.add(0.0, down, 0.0);
+            if (stepped.horizontalDistanceSqr() > result.horizontalDistanceSqr() + 1.0E-7) {
+                result = stepped;
+            }
+        }
+        if (result.equals(local)) {
+            return movement;
         }
         double angle = -Math.toRadians(getYRot());
         double cos = Math.cos(angle);
         double sin = Math.sin(angle);
-        double half = 0.5 * (Math.abs(cos) + Math.abs(sin));
-        for (BlockPos cell : surfaceCells()) {
-            double cx = pos.x + cell.getX() * cos + cell.getZ() * sin;
-            double cz = pos.z + cell.getZ() * cos - cell.getX() * sin;
-            if (cx + half < area.minX || cx - half > area.maxX || cz + half < area.minZ || cz - half > area.maxZ) {
-                continue;
-            }
-            BlockState state = stateByPos.get(cell);
-            if (state == null || ModBlocks.isAirshipBuildBlock(state.getBlock())) {
-                continue;
-            }
-            VoxelShape shape;
-            try {
-                shape = state.getCollisionShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO);
-            } catch (RuntimeException e) {
-                shape = Shapes.block();
-            }
-            if (shape.isEmpty()) {
-                continue;
-            }
-            double baseY = pos.y + cell.getY();
-            AABB box = new AABB(cx - half, baseY + shape.min(Direction.Axis.Y), cz - half,
-                    cx + half, baseY + shape.max(Direction.Axis.Y), cz + half);
-            if (box.intersects(area)) {
-                out.add(Shapes.create(box));
+        return new Vec3(result.x * cos + result.z * sin, result.y, result.z * cos - result.x * sin);
+    }
+
+    /** Client side: true if the world box overlaps one of the ship's blocks (exact shapes). */
+    public boolean touches(AABB world) {
+        AABB local = toLocalBox(world);
+        for (VoxelShape shape : localShapes(local)) {
+            for (AABB part : shape.toAabbs()) {
+                if (part.intersects(local)) {
+                    return true;
+                }
             }
         }
+        return false;
     }
 
     public static final int CARRY_NONE = 0;
@@ -424,10 +527,14 @@ public class AirshipEntity extends Entity {
         float turn = Mth.wrapDegrees(curYaw - prevYaw);
         if (!curPos.equals(prevPos) || turn != 0.0F) {
             Vec3 offset = entity.position().subtract(prevPos).yRot((float) -Math.toRadians(turn));
-            Vec3 target = curPos.add(offset);
+            Vec3 shift = curPos.add(offset).subtract(entity.position());
             // In the air only the sideways movement is taken over: jumping and falling stay the player's own.
-            double y = standing ? target.y : entity.getY();
-            entity.setPos(target.x, y, target.z);
+            if (!standing) {
+                shift = new Vec3(shift.x, 0.0, shift.z);
+            }
+            // Applied as part of the player's own movement this tick (see AirshipShipColliders), so the player is
+            // drawn moving smoothly with the ship instead of jumping once per tick.
+            AirshipShipColliders.carryBy(shift);
             entity.setYRot(entity.getYRot() + turn);
         }
         return standing ? CARRY_STANDING : CARRY_ABOVE;
