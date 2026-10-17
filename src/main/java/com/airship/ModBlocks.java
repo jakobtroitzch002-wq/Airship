@@ -53,7 +53,7 @@ public final class ModBlocks {
     /** How much of the fuel speed boost a Simple Engine gives compared to the normal Engine. */
     public static final double SIMPLE_ENGINE_POWER = 0.6;
     /** How much of the fuel speed boost an Advanced Engine gives compared to the normal Engine. */
-    public static final double ADVANCED_ENGINE_POWER = 1.6;
+    public static final double ADVANCED_ENGINE_POWER = 2.5;
     /** A Simple Engine burns this many ticks of fuel per tick of thrust (the normal Engine burns 1). */
     public static final int SIMPLE_ENGINE_BURN_RATE = 2;
 

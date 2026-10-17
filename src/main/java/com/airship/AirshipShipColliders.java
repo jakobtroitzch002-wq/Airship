@@ -69,6 +69,54 @@ public final class AirshipShipColliders {
         return carry.add(result);
     }
 
+    /** True if the box overlaps a block of any flying ship nearby. */
+    public static boolean touchesAnyShip(Entity entity, AABB box) {
+        for (AirshipEntity ship : entity.level().getEntitiesOfClass(AirshipEntity.class, box.inflate(SEARCH))) {
+            if (ship.touches(box)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Sneaking on a ship: Minecraft stops a sneaking player at the edge of the ground, but only knows real blocks
+     * there. On a ship the same rule is used with the ship's blocks counted as ground too.
+     * Returns null if the player does not stand on a ship (then Minecraft's own rule is used).
+     */
+    public static Vec3 backOffFromEdge(Entity player, Vec3 movement, double stepHeight) {
+        AABB box = player.getBoundingBox();
+        if (!touchesAnyShip(player, below(box, 0.0, 0.0, stepHeight))) {
+            return null;
+        }
+        double x = movement.x;
+        double z = movement.z;
+        double step = 0.05;
+        while (x != 0.0 && canFall(player, box, x, 0.0, stepHeight)) {
+            x = Math.abs(x) <= step ? 0.0 : x - Math.copySign(step, x);
+        }
+        while (z != 0.0 && canFall(player, box, 0.0, z, stepHeight)) {
+            z = Math.abs(z) <= step ? 0.0 : z - Math.copySign(step, z);
+        }
+        while (x != 0.0 && z != 0.0 && canFall(player, box, x, z, stepHeight)) {
+            x = Math.abs(x) <= step ? 0.0 : x - Math.copySign(step, x);
+            z = Math.abs(z) <= step ? 0.0 : z - Math.copySign(step, z);
+        }
+        return new Vec3(x, movement.y, z);
+    }
+
+    /** The strip just below the box, moved sideways. */
+    private static AABB below(AABB box, double dx, double dz, double depth) {
+        return new AABB(box.minX + dx, box.minY - depth - 1.0E-5, box.minZ + dz,
+                box.maxX + dx, box.minY, box.maxZ + dz).deflate(1.0E-7, 0.0, 1.0E-7);
+    }
+
+    /** True if there is neither a real block nor a ship block under the moved box. */
+    private static boolean canFall(Entity player, AABB box, double dx, double dz, double depth) {
+        AABB strip = below(box, dx, dz, depth);
+        return player.level().noCollision(player, strip) && !touchesAnyShip(player, strip);
+    }
+
     /** True if one of the ship's blocks is below the entity, at most {@code depth} blocks down. */
     public static boolean isAbove(AirshipEntity ship, Entity entity, double depth) {
         AABB box = entity.getBoundingBox();
