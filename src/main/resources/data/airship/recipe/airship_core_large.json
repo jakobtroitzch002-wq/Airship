@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "G": "minecraft:gold_block",
+    "D": "minecraft:diamond",
+    "C": "airship:airship_core"
+  },
+  "pattern": [
+    "GDG",
+    "DCD",
+    "GDG"
+  ],
+  "result": {
+    "id": "airship:airship_core_large",
+    "count": 1
+  }
+}

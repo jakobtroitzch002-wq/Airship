@@ -1,0 +1,55 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "side": "airship:block/airship_core_large_side",
+    "top": "airship:block/airship_core_large_top",
+    "bottom": "airship:block/airship_core_large_bottom",
+    "particle": "airship:block/airship_core_large_side"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        16,
+        16,
+        16
+      ],
+      "faces": {
+        "north": {
+          "texture": "#side",
+          "uv": [
+            0.0,
+            0.0,
+            8.0,
+            8.0
+          ],
+          "cullface": "north"
+        },
+        "east": {
+          "texture": "#side",
+          "uv": [
+            8.0,
+            0.0,
+            16.0,
+            8.0
+          ],
+          "cullface": "east"
+        },
+        "up": {
+          "texture": "#top",
+          "uv": [
+            8.0,
+            0.0,
+            16.0,
+            8.0
+          ],
+          "cullface": "up"
+        }
+      }
+    }
+  ]
+}

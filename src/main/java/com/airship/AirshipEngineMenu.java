@@ -31,7 +31,7 @@ public class AirshipEngineMenu extends AbstractContainerMenu {
 
     /** Client side. */
     public AirshipEngineMenu(int containerId, Inventory inventory) {
-        this(containerId, inventory, null, new SimpleContainerData(4));
+        this(containerId, inventory, null, new SimpleContainerData(6));
     }
 
     /** Server side. */
@@ -94,6 +94,16 @@ public class AirshipEngineMenu extends AbstractContainerMenu {
     public double getPower() {
         int percent = data.get(3);
         return percent <= 0 ? 1.0 : percent / 100.0;
+    }
+
+    /** Ticks of turbo fuel burnt per tick of turbo. */
+    public int getTurboBurnRate() {
+        return Math.max(1, data.get(4));
+    }
+
+    /** Size of the turbo tank, in ticks. */
+    public int getMaxTurbo() {
+        return Math.max(1, data.get(5) * 20);
     }
 
     /** Remaining fuel of the normal tank, in ticks of thrust. */

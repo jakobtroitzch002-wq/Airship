@@ -79,7 +79,7 @@ final class AirshipHud {
             g.text(font, Component.literal(AirshipFuel.time(data.turboTicks() / AirshipEntity.TURBO_BURN_RATE))
                             .withStyle(ChatFormatting.BOLD),
                     timeX, y + 26, data.boosting() ? AirshipGuiStyle.EMBER : TEXT, false);
-            bar(g, barX, y + 28, barWidth, (float) data.turboTicks() / AirshipEngineBlockEntity.MAX_TURBO,
+            bar(g, barX, y + 28, barWidth, Math.min(1.0F, (float) data.turboTicks() / AirshipEngineBlockEntity.MAX_TURBO),
                     AirshipGuiStyle.TURBO);
         }
     }

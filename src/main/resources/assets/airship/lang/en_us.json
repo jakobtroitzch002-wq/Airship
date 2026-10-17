@@ -16,7 +16,7 @@
   "advancement.airship.seat.description": "Craft an Airship Seat.",
   "advancement.airship.engine.title": "Full Steam Ahead",
   "advancement.airship.engine.description": "Craft an Airship Engine.",
-  "tooltip.airship.airship_core": "Holds a large ship: up to 500 blocks.",
+  "tooltip.airship.airship_core": "Holds a large ship: up to 250 blocks.",
   "tooltip.airship.airship_core.2": "Right-click: check and register the ship.",
   "tooltip.airship.airship_balloon": "Carries 5 ship blocks.",
   "tooltip.airship.airship_engine": "Right-click: add fuel.",
@@ -97,5 +97,11 @@
   "tooltip.airship.airship_balloon_sky.2": "Only pops from tridents and crossbow arrows with Piercing III.",
   "block.airship.airship_engine_advanced": "Advanced Airship Engine",
   "tooltip.airship.airship_engine_advanced": "Right-click: add fuel.",
-  "tooltip.airship.airship_engine_advanced.2": "Much faster than the Airship Engine, with turbo."
+  "tooltip.airship.airship_engine_advanced.2": "20 blocks/s, a big turbo tank that burns half as much.",
+  "block.airship.airship_core_large": "Large Airship Core",
+  "tooltip.airship.airship_core_large": "2×2×2 blocks. Holds a huge ship: up to 500 blocks.",
+  "tooltip.airship.airship_core_large.2": "Right-click: check and register the ship.",
+  "block.airship.airship_core_colossal": "Colossal Airship Core",
+  "tooltip.airship.airship_core_colossal": "3×3×3 blocks. Holds a gigantic ship: up to 1000 blocks.",
+  "tooltip.airship.airship_core_colossal.2": "Right-click: check and register the ship."
 }

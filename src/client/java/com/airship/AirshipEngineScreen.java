@@ -72,14 +72,14 @@ public class AirshipEngineScreen extends AbstractContainerScreen<AirshipEngineMe
             int turbo = menu.getTurbo();
             g.text(font, Component.translatable("screen.airship.engine.turbo").withStyle(ChatFormatting.BOLD), left, y + 76,
                     AirshipGuiStyle.TURBO, false);
-            String burn = tr("screen.airship.engine.burn", AirshipEntity.TURBO_BURN_RATE);
+            String burn = tr("screen.airship.engine.burn", menu.getTurboBurnRate());
             g.text(font, burn, right - font.width(burn), y + 76, AirshipGuiStyle.MUTED, false);
             // The turbo tank is shown as the time of turbo it gives (its fuel burns TURBO_BURN_RATE times as fast).
-            String turboTime = AirshipFuel.time(turbo / AirshipEntity.TURBO_BURN_RATE);
+            String turboTime = AirshipFuel.time(turbo / menu.getTurboBurnRate());
             g.text(font, Component.translatable("screen.airship.engine.turbo_time", turboTime).withStyle(ChatFormatting.BOLD), left, y + 86,
                     turbo > 0 ? AirshipGuiStyle.TEXT : AirshipGuiStyle.MUTED, false);
             AirshipGuiStyle.bar(g, left, y + 97, right - left, 7,
-                    (float) turbo / AirshipEngineBlockEntity.MAX_TURBO, AirshipGuiStyle.TURBO);
+                    (float) turbo / menu.getMaxTurbo(), AirshipGuiStyle.TURBO);
 
             // Stat tiles
             double boost = (AirshipEntity.FUEL_SPEED - AirshipEntity.BASE_SPEED) * (menu.getPower() - 1.0);

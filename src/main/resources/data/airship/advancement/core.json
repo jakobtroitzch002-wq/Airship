@@ -24,7 +24,9 @@
             "items": [
               "airship:airship_core",
               "airship:airship_core_wood",
-              "airship:airship_core_iron"
+              "airship:airship_core_iron",
+              "airship:airship_core_large",
+              "airship:airship_core_colossal"
             ]
           }
         ]

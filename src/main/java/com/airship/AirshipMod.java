@@ -55,6 +55,10 @@ public final class AirshipMod implements ModInitializer {
                 AirshipCoreActionPayload.TYPE,
                 AirshipCoreActionPayload.CODEC
         );
+        PayloadTypeRegistry.clientboundPlay().register(
+                AirshipEnginePayload.TYPE,
+                AirshipEnginePayload.CODEC
+        );
         PayloadTypeRegistry.serverboundPlay().register(
                 AirshipShipClickPayload.TYPE,
                 AirshipShipClickPayload.CODEC

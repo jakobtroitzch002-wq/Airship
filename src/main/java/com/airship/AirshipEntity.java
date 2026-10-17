@@ -12,6 +12,7 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
@@ -86,6 +87,11 @@ public class AirshipEntity extends Entity {
     private int requiredLift;
     /** Largest horizontal distance of a cell from the origin, used to find projectiles near the ship. */
     private double radius;
+    /** Engine cells (relative to the Core), for their smoke. */
+    private List<BlockPos> engineCells = List.of();
+    /** What the engines do (see {@link AirshipEnginePayload}): on the server what was sent last, on clients what came. */
+    private int engineState = AirshipEnginePayload.OFF;
+
     /** Server only: the ship rests on the ground (then it turns into blocks as soon as nobody steers it). */
     private boolean resting;
     /** Server only: projectiles that already hit a balloon -> how many more balloons they may pop. */
@@ -169,6 +175,13 @@ public class AirshipEntity extends Entity {
             this.radius = Math.max(this.radius, Math.sqrt((double) p.getX() * p.getX() + (double) p.getZ() * p.getZ()));
         }
         this.requiredLift = AirshipLift.requiredLift(stateByPos.size());
+        List<BlockPos> engines = new ArrayList<>();
+        for (Map.Entry<BlockPos, BlockState> entry : stateByPos.entrySet()) {
+            if (ModBlocks.isEngine(entry.getValue())) {
+                engines.add(entry.getKey());
+            }
+        }
+        this.engineCells = List.copyOf(engines);
 
         // The Airship Seat faces the front of the ship.
         this.controlYaw = 0.0F;
@@ -703,7 +716,7 @@ public class AirshipEntity extends Entity {
 
     /** True for the ship's blocks that can be right-clicked while it flies. */
     public static boolean isClickable(BlockState state) {
-        return state.is(ModBlocks.AIRSHIP_SEAT) || ModBlocks.isEngine(state) || ModBlocks.isCore(state);
+        return state.is(ModBlocks.AIRSHIP_SEAT) || ModBlocks.isEngine(state) || ModBlocks.isCoreBlock(state);
     }
 
     /** World position of the centre of a cell. */
@@ -721,7 +734,7 @@ public class AirshipEntity extends Entity {
             board(player);
         } else if (ModBlocks.isEngine(state)) {
             openEngine(player, cell, state);
-        } else if (ModBlocks.isCore(state)) {
+        } else if (ModBlocks.isCoreBlock(state)) {
             ServerPlayNetworking.send(player, coreInfo());
         }
     }
@@ -743,7 +756,7 @@ public class AirshipEntity extends Entity {
 
             @Override
             public int maxTurbo() {
-                return hasTurbo ? AirshipEngineBlockEntity.MAX_TURBO : 0;
+                return ModBlocks.maxTurbo(state);
             }
 
             @Override
@@ -770,6 +783,12 @@ public class AirshipEntity extends Entity {
                 if (index == 3) {
                     return (int) Math.round(ModBlocks.enginePower(state) * 100.0);
                 }
+                if (index == 4) {
+                    return ModBlocks.turboBurnRate(state);
+                }
+                if (index == 5) {
+                    return ModBlocks.maxTurbo(state) / 20;
+                }
                 return (index == 0 ? tank.getFuel() : tank.getTurbo()) / 20; // seconds, see AirshipEngineBlockEntity
             }
 
@@ -779,7 +798,7 @@ public class AirshipEntity extends Entity {
 
             @Override
             public int getCount() {
-                return 4;
+                return 6;
             }
         };
         player.openMenu(new SimpleMenuProvider(
@@ -896,6 +915,7 @@ public class AirshipEntity extends Entity {
         }
         clientAdvance();
         advanced = false;
+        spawnEngineSmoke();
     }
 
     /** Client side: already moved this tick (by {@link #clientAdvance} from the start of the client tick). */
@@ -1153,7 +1173,8 @@ public class AirshipEntity extends Entity {
             for (Map.Entry<BlockPos, Integer> entry : engineFuel.entrySet()) {
                 int turbo = turboFuel.getOrDefault(entry.getKey(), 0);
                 if (wantBoost && turbo > 0) {
-                    turboFuel.put(entry.getKey(), Math.max(0, turbo - TURBO_BURN_RATE));
+                    int rate = ModBlocks.turboBurnRate(stateByPos.get(entry.getKey()));
+                    turboFuel.put(entry.getKey(), Math.max(0, turbo - rate));
                 } else if (entry.getValue() > 0) {
                     int burn = ModBlocks.engineBurnRate(stateByPos.get(entry.getKey()));
                     entry.setValue(Math.max(0, entry.getValue() - burn));
@@ -1206,6 +1227,8 @@ public class AirshipEntity extends Entity {
         setDeltaMovement(velocity);
         checkProjectiles(level);
         broadcastState(level);
+        sendEngineState(level, !thrusting || activeEngines == 0 ? AirshipEnginePayload.OFF
+                : turboActive > 0 ? AirshipEnginePayload.TURBO : AirshipEnginePayload.RUNNING);
 
         // Flight display for the pilot (a few times per second is plenty).
         if (level.getGameTime() % 5 == 0) {
@@ -1215,8 +1238,11 @@ public class AirshipEntity extends Entity {
                 // shown as thrust time: a Simple Engine's tank empties faster
                 fuelMax = Math.max(fuelMax, entry.getValue() / ModBlocks.engineBurnRate(stateByPos.get(entry.getKey())));
             }
-            for (int value : turboFuel.values()) {
-                turboMax = Math.max(turboMax, value);
+            for (Map.Entry<BlockPos, Integer> entry : turboFuel.entrySet()) {
+                // sent as if burnt at the normal rate, so the display shows the turbo time of every engine kind
+                BlockState engineState = stateByPos.get(entry.getKey());
+                long normalized = (long) entry.getValue() * TURBO_BURN_RATE / ModBlocks.turboBurnRate(engineState);
+                turboMax = (int) Math.max(turboMax, Math.min(Integer.MAX_VALUE, normalized));
             }
             ServerPlayNetworking.send(pilot, new AirshipHudPayload(
                     fuelMax, turboMax, engineFuel.size(), activeEngines,
@@ -1242,6 +1268,54 @@ public class AirshipEntity extends Entity {
         setDeltaMovement(velocity);
         checkProjectiles(level);
         broadcastState(level);
+        sendEngineState(level, AirshipEnginePayload.OFF);
+    }
+
+    /** Server side: tells everybody who sees the ship when its engines start, stop or switch to turbo. */
+    private void sendEngineState(ServerLevel level, int state) {
+        boolean heartbeat = state != AirshipEnginePayload.OFF && level.getGameTime() % 40 == 0;
+        if (state == engineState && !heartbeat) {
+            return;
+        }
+        engineState = state;
+        AirshipEnginePayload payload = new AirshipEnginePayload(getId(), state);
+        for (ServerPlayer tracking : PlayerLookup.tracking(this)) {
+            ServerPlayNetworking.send(tracking, payload);
+        }
+    }
+
+    /** Client side: what the engines do now. */
+    public void setEngineState(int state) {
+        this.engineState = state;
+    }
+
+    /**
+     * Client side: running engines smoke from their top. The faster the ship, the more smoke and the faster it
+     * puffs out; with turbo it is thick, dark smoke. The smoke is left behind as the ship moves on.
+     */
+    private void spawnEngineSmoke() {
+        if (engineState == AirshipEnginePayload.OFF || engineCells.isEmpty() || !smoothReady) {
+            return;
+        }
+        boolean turbo = engineState == AirshipEnginePayload.TURBO;
+        Vec3 motion = curPos.subtract(prevPos);
+        double speed = motion.length(); // blocks per tick
+        double perEngine = (0.25 + speed * 1.6) * (turbo ? 1.8 : 1.0);
+        SimpleParticleType smoke = turbo ? ParticleTypes.LARGE_SMOKE : ParticleTypes.SMOKE;
+        for (BlockPos cell : engineCells) {
+            int count = (int) perEngine + (random.nextDouble() < perEngine - (int) perEngine ? 1 : 0);
+            Vec3 top = position().add(toWorldOffset(new Vec3(cell.getX(), cell.getY() + 1.02, cell.getZ())));
+            for (int i = 0; i < count; i++) {
+                double up = 0.04 + speed * 0.08 + random.nextDouble() * 0.03;
+                level().addParticle(i % 3 == 2 ? ParticleTypes.LARGE_SMOKE : smoke,
+                        top.x + (random.nextDouble() - 0.5) * 0.5,
+                        top.y + random.nextDouble() * 0.1,
+                        top.z + (random.nextDouble() - 0.5) * 0.5,
+                        -motion.x * 0.25 + (random.nextDouble() - 0.5) * 0.02,
+                        up,
+                        -motion.z * 0.25 + (random.nextDouble() - 0.5) * 0.02);
+            }
+        }
     }
 
     // ------------------------------------------------------------------ projectiles

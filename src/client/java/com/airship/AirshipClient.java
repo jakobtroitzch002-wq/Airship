@@ -32,6 +32,8 @@ public final class AirshipClient implements ClientModInitializer {
             java.util.Map.entry("airship_core", 2),
             java.util.Map.entry("airship_core_wood", 2),
             java.util.Map.entry("airship_core_iron", 2),
+            java.util.Map.entry("airship_core_large", 2),
+            java.util.Map.entry("airship_core_colossal", 2),
             java.util.Map.entry("airship_balloon_simple", 2),
             java.util.Map.entry("airship_balloon_reinforced", 2),
             java.util.Map.entry("airship_balloon_large", 2),
@@ -131,6 +133,14 @@ public final class AirshipClient implements ClientModInitializer {
                     assignment.put(payload.passengerIds().get(i), payload.seatIndices().get(i));
                 }
                 ship.setSeatAssignment(assignment);
+            }
+        });
+
+        // Engines of a ship started, stopped or switched to turbo (for their smoke).
+        ClientPlayNetworking.registerGlobalReceiver(AirshipEnginePayload.TYPE, (payload, context) -> {
+            Minecraft client = Minecraft.getInstance();
+            if (client.level != null && client.level.getEntity(payload.entityId()) instanceof AirshipEntity ship) {
+                ship.setEngineState(payload.state());
             }
         });
 

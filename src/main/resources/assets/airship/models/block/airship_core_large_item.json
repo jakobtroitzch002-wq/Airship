@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "side": "airship:block/airship_core_large_side",
+    "top": "airship:block/airship_core_large_top",
+    "bottom": "airship:block/airship_core_large_bottom",
+    "particle": "airship:block/airship_core_large_side"
+  }
+}

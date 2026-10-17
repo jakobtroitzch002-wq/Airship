@@ -113,15 +113,17 @@ Cushions (new in 26.3) are entities that players can sit on. On a ship they are 
 | --- | --- | --- |
 | Wooden Airship Core | holds ships of up to **25 blocks** | 4 logs (corners) + 4 planks around 1 iron ingot |
 | Iron Airship Core | holds ships of up to **100 blocks** | 8 iron ingots around a Wooden Airship Core |
-| Airship Core | holds ships of up to **500 blocks** | see Survival |
+| Airship Core | holds ships of up to **250 blocks** | see Survival |
+| Large Airship Core (2×2×2) | holds ships of up to **500 blocks** | 4 gold blocks (corners) + 4 diamonds + Airship Core (middle) |
+| Colossal Airship Core (3×3×3) | holds ships of up to **1000 blocks**, glows | 4 diamond blocks (corners) + 4 netherite ingots + Large Airship Core (middle) |
 | Simple Airship Balloon | carries only **3 ship blocks** (a Balloon carries 5), pops from **any** projectile | wool over a stick |
 | Reinforced Airship Balloon (makes 4) | like a Balloon, but only pops from **tridents** and **crossbow arrows with Piercing III** | 4 Balloons (corners) + 4 leather + 1 iron ingot (middle) |
 | Simple Airship Engine | gives **60 %** of the fuel speed boost, has **no turbo** and burns **twice the fuel** | iron ingot, cobblestone, furnace, 3 planks |
 | Large Airship Balloon | carries **8 ship blocks**, pops like a Balloon | 2 leather (top, bottom) + 2 iron ingots (sides) + 1 Balloon (middle) |
 | Sky Balloon | carries **12 ship blocks**, only pops from tridents and crossbow arrows with Piercing III | 2 phantom membranes (top, bottom) + 2 wool (sides) + 1 Large Balloon (middle) |
-| Advanced Airship Engine | gives **250 %** of the fuel speed boost, has turbo | 4 diamonds (corners), redstone block (top), 2 blaze rods (sides), Airship Engine (middle), blast furnace (bottom) |
+| Advanced Airship Engine | about **20 blocks/s** with fuel; its turbo tank is twice as big and burns half as much | 4 diamonds (corners), redstone block (top), 2 blaze rods (sides), Airship Engine (middle), blast furnace (bottom) |
 
-All core limits are capped by `maxBlocks` from the config. The Core screen shows how many ship blocks the balloons
+The big Cores are placed as one cube (it needs free room) and break as one; the cube grows to the right, up and away from you. All core limits are capped by `maxBlocks` from the config. Running engines smoke (more the faster the ship flies, thick smoke with turbo). The Core screen shows how many ship blocks the balloons
 carry and how many are needed. A Simple Engine has no turbo tank, so its
 screen only has the fuel slot. Mixed ships work: speed is blended by how much of the engine power is fuelled.
 

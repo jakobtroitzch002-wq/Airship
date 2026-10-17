@@ -16,7 +16,7 @@
   "advancement.airship.seat.description": "Stelle einen Luftschiff-Sitz her.",
   "advancement.airship.engine.title": "Volle Kraft voraus",
   "advancement.airship.engine.description": "Stelle einen Luftschiff-Antrieb her.",
-  "tooltip.airship.airship_core": "Hält ein großes Schiff: bis zu 500 Blöcke.",
+  "tooltip.airship.airship_core": "Hält ein großes Schiff: bis zu 250 Blöcke.",
   "tooltip.airship.airship_core.2": "Rechtsklick: Schiff prüfen und registrieren.",
   "tooltip.airship.airship_balloon": "Trägt 5 Schiffsblöcke.",
   "tooltip.airship.airship_engine": "Rechtsklick: Treibstoff einfüllen.",
@@ -97,5 +97,11 @@
   "tooltip.airship.airship_balloon_sky.2": "Platzt nur bei Dreizacken und Armbrust-Pfeilen mit Durchschuss III.",
   "block.airship.airship_engine_advanced": "Verbesserter Luftschiff-Antrieb",
   "tooltip.airship.airship_engine_advanced": "Rechtsklick: Treibstoff einfüllen.",
-  "tooltip.airship.airship_engine_advanced.2": "Deutlich schneller als der Luftschiff-Antrieb, mit Turbo."
+  "tooltip.airship.airship_engine_advanced.2": "20 Blöcke/s, großer Turbo-Tank mit halbem Verbrauch.",
+  "block.airship.airship_core_large": "Großer Luftschiff-Kern",
+  "tooltip.airship.airship_core_large": "2×2×2 Blöcke groß. Hält ein riesiges Schiff: bis zu 500 Blöcke.",
+  "tooltip.airship.airship_core_large.2": "Rechtsklick: Schiff prüfen und registrieren.",
+  "block.airship.airship_core_colossal": "Riesiger Luftschiff-Kern",
+  "tooltip.airship.airship_core_colossal": "3×3×3 Blöcke groß. Hält ein gewaltiges Schiff: bis zu 1000 Blöcke.",
+  "tooltip.airship.airship_core_colossal.2": "Rechtsklick: Schiff prüfen und registrieren."
 }

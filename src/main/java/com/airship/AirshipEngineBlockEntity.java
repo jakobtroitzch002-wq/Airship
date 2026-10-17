@@ -33,6 +33,12 @@ public class AirshipEngineBlockEntity extends BlockEntity implements MenuProvide
             if (index == 3) {
                 return (int) Math.round(ModBlocks.enginePower(getBlockState()) * 100.0);
             }
+            if (index == 4) {
+                return ModBlocks.turboBurnRate(getBlockState());
+            }
+            if (index == 5) {
+                return maxTurbo() / 20;
+            }
             return (index == 0 ? fuel : turbo) / 20;
         }
 
@@ -42,7 +48,7 @@ public class AirshipEngineBlockEntity extends BlockEntity implements MenuProvide
 
         @Override
         public int getCount() {
-            return 4;
+            return 6;
         }
     };
 
@@ -57,7 +63,7 @@ public class AirshipEngineBlockEntity extends BlockEntity implements MenuProvide
 
     @Override
     public int maxTurbo() {
-        return canTurbo() ? MAX_TURBO : 0;
+        return ModBlocks.maxTurbo(getBlockState());
     }
 
     @Override
