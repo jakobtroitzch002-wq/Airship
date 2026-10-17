@@ -55,16 +55,16 @@ public final class AirshipMod implements ModInitializer {
                 AirshipCoreActionPayload.CODEC
         );
         PayloadTypeRegistry.serverboundPlay().register(
-                AirshipBoardPayload.TYPE,
-                AirshipBoardPayload.CODEC
+                AirshipShipClickPayload.TYPE,
+                AirshipShipClickPayload.CODEC
         );
         AirshipControls.registerServer();
 
-        // Right-click on the seat of a hovering ship: become its pilot again.
-        ServerPlayNetworking.registerGlobalReceiver(AirshipBoardPayload.TYPE, (payload, context) -> {
+        // Right-click on a block of a flying ship: the seat (steer it), an engine (fuel) or the Core (its screen).
+        ServerPlayNetworking.registerGlobalReceiver(AirshipShipClickPayload.TYPE, (payload, context) -> {
             ServerPlayer player = context.player();
             if (player.level().getEntity(payload.entityId()) instanceof AirshipEntity ship) {
-                ship.board(player);
+                ship.click(player, payload.cell());
             }
         });
 
@@ -72,6 +72,12 @@ public final class AirshipMod implements ModInitializer {
         ServerPlayNetworking.registerGlobalReceiver(AirshipCoreActionPayload.TYPE, (payload, context) -> {
             ServerPlayer player = context.player();
             if (!(player.level() instanceof ServerLevel level)) {
+                return;
+            }
+            if (payload.shipId() != AirshipCoreInfoPayload.NO_SHIP) {
+                if (level.getEntity(payload.shipId()) instanceof AirshipEntity ship) {
+                    ship.coreAction(player, payload.action());
+                }
                 return;
             }
             BlockPos pos = payload.pos();

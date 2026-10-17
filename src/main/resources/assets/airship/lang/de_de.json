@@ -84,5 +84,9 @@
   "tooltip.airship.airship_balloon_simple.2": "Platzt bei jedem Projektil, auch bei Schneebällen.",
   "tooltip.airship.airship_balloon_reinforced": "Trägt 5 Schiffsblöcke.",
   "tooltip.airship.airship_balloon_reinforced.2": "Platzt nur bei Dreizacken und Armbrust-Pfeilen mit Durchschuss III.",
-  "message.airship.sinking": "Zu wenig Auftrieb: das Luftschiff sinkt!"
+  "message.airship.sinking": "Zu wenig Auftrieb: das Luftschiff sinkt!",
+  "screen.airship.core.align": "Am Raster ausrichten (zum Umbauen)",
+  "screen.airship.core.flying": "In der Luft",
+  "screen.airship.core.flying_hint1": "Ausrichten: das Schiff wird hier zu Blöcken.",
+  "screen.airship.core.flying_hint2": "Danach umbauen, prüfen und wieder hinsetzen."
 }

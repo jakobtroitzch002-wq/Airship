@@ -20,8 +20,10 @@ public class AirshipCoreScreen extends Screen {
         this.info = info;
     }
 
-    public boolean isFor(BlockPos pos) {
-        return info.pos().equals(pos);
+    public boolean isFor(AirshipCoreInfoPayload other) {
+        return other.shipId() != AirshipCoreInfoPayload.NO_SHIP
+                ? other.shipId() == info.shipId()
+                : info.shipId() == AirshipCoreInfoPayload.NO_SHIP && info.pos().equals(other.pos());
     }
 
     public void update(AirshipCoreInfoPayload newInfo) {
@@ -32,6 +34,17 @@ public class AirshipCoreScreen extends Screen {
     protected void init() {
         int x = (width - PANEL_W) / 2;
         int y = (height - PANEL_H) / 2;
+        if (info.shipId() != AirshipCoreInfoPayload.NO_SHIP) {
+            // A flying ship: one button that puts it into the block grid, so it can be rebuilt.
+            addRenderableWidget(Button.builder(Component.translatable("screen.airship.core.align"), button -> {
+                        send(AirshipCoreActionPayload.ALIGN);
+                        onClose();
+                    })
+                    .pos(x + 10, y + 160)
+                    .size(PANEL_W - 20, 20)
+                    .build());
+            return;
+        }
         addRenderableWidget(Button.builder(Component.translatable("screen.airship.core.recheck"), button -> send(AirshipCoreActionPayload.RECHECK))
                 .pos(x + 10, y + 160)
                 .size(92, 20)
@@ -43,7 +56,7 @@ public class AirshipCoreScreen extends Screen {
     }
 
     private void send(int action) {
-        ClientPlayNetworking.send(new AirshipCoreActionPayload(info.pos(), action));
+        ClientPlayNetworking.send(new AirshipCoreActionPayload(info.pos(), action, info.shipId()));
     }
 
     @Override
@@ -62,7 +75,9 @@ public class AirshipCoreScreen extends Screen {
         AirshipGuiStyle.compass(g, x + 10, y + 9);
         g.text(font, Component.translatable("screen.airship.core").withStyle(ChatFormatting.BOLD),
                 x + 25, y + 11, AirshipGuiStyle.TEXT, false);
-        String badge = tr(info.ready() ? "screen.airship.core.ready" : "screen.airship.core.not_ready");
+        boolean flying = info.shipId() != AirshipCoreInfoPayload.NO_SHIP;
+        String badge = tr(flying ? "screen.airship.core.flying"
+                : info.ready() ? "screen.airship.core.ready" : "screen.airship.core.not_ready");
         int badgeWidth = font.width(badge) + 8;
         int badgeX = x + PANEL_W - 10 - badgeWidth;
         g.fill(badgeX, y + 9, badgeX + badgeWidth, y + 21, info.ready() ? AirshipGuiStyle.OK : AirshipGuiStyle.BAD);
@@ -89,8 +104,10 @@ public class AirshipCoreScreen extends Screen {
         row(g, x, rowY, tr("screen.airship.core.engines"),
                 tr("screen.airship.core.engines_value", info.engines()), true, -1.0F);
 
-        g.text(font, tr("screen.airship.core.hint1"), x + 10, y + 186, AirshipGuiStyle.MUTED, false);
-        g.text(font, tr("screen.airship.core.hint2"), x + 10, y + 196, AirshipGuiStyle.MUTED, false);
+        g.text(font, tr(flying ? "screen.airship.core.flying_hint1" : "screen.airship.core.hint1"),
+                x + 10, y + 186, AirshipGuiStyle.MUTED, false);
+        g.text(font, tr(flying ? "screen.airship.core.flying_hint2" : "screen.airship.core.hint2"),
+                x + 10, y + 196, AirshipGuiStyle.MUTED, false);
     }
 
     private static String tr(String key, Object... values) {

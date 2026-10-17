@@ -84,5 +84,9 @@
   "tooltip.airship.airship_balloon_simple.2": "Pops when hit by any projectile, even snowballs.",
   "tooltip.airship.airship_balloon_reinforced": "Carries 5 ship blocks.",
   "tooltip.airship.airship_balloon_reinforced.2": "Only pops from tridents and crossbow arrows with Piercing III.",
-  "message.airship.sinking": "Not enough lift: the airship is sinking!"
+  "message.airship.sinking": "Not enough lift: the airship is sinking!",
+  "screen.airship.core.align": "Snap to grid (to rebuild)",
+  "screen.airship.core.flying": "In the air",
+  "screen.airship.core.flying_hint1": "Snap: the ship turns into blocks right here.",
+  "screen.airship.core.flying_hint2": "Then rebuild, check it and sit down again."
 }

@@ -34,4 +34,28 @@ public abstract class EntityCollideMixin {
             AirshipShipColliders.exit();
         }
     }
+
+    /**
+     * Stepping up (walking onto a slab, a stair or a block edge) collects its obstacles separately. Without the
+     * ship there, walking against a wall of the ship could "step" the player into it. Optional: if this method
+     * does not exist in this Minecraft version, only the injection above is used.
+     */
+    @Inject(method = "collectColliders(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/level/Level;Ljava/util/List;Lnet/minecraft/world/phys/AABB;)Ljava/util/List;",
+            at = @At("RETURN"), cancellable = true, require = 0)
+    private static void airship$collectShips(@Nullable Entity entity, Level level, List<VoxelShape> collisions,
+            AABB box, CallbackInfoReturnable<List<VoxelShape>> cir) {
+        if (!AirshipShipColliders.enter(entity, level)) {
+            return;
+        }
+        try {
+            List<VoxelShape> ships = AirshipShipColliders.shapes(level, box);
+            if (!ships.isEmpty()) {
+                List<VoxelShape> all = new ArrayList<>(cir.getReturnValue());
+                all.addAll(ships);
+                cir.setReturnValue(all);
+            }
+        } finally {
+            AirshipShipColliders.exit();
+        }
+    }
 }

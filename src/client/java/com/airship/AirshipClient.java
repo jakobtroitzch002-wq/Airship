@@ -17,6 +17,7 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.network.chat.Component;
+import java.util.List;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
@@ -100,7 +101,7 @@ public final class AirshipClient implements ClientModInitializer {
         MenuScreens.register(ModMenus.ENGINE, AirshipEngineScreen::new);
         ClientPlayNetworking.registerGlobalReceiver(AirshipCoreInfoPayload.TYPE, (payload, context) -> {
             Minecraft client = Minecraft.getInstance();
-            if (client.gui.screen() instanceof AirshipCoreScreen screen && screen.isFor(payload.pos())) {
+            if (client.gui.screen() instanceof AirshipCoreScreen screen && screen.isFor(payload)) {
                 screen.update(payload);
             } else {
                 client.gui.setScreen(new AirshipCoreScreen(payload));
@@ -157,64 +158,74 @@ public final class AirshipClient implements ClientModInitializer {
             }
         });
 
-        // Right-click on the Airship Seat of a hovering ship: steer it again. The ship's blocks are not real
-        // blocks, so the click is checked here (before the game handles it) against the ship's own grid.
+        // Start of every client tick, before anything moves:
+        // 1. ships near the player take their step (so the player then moves against where the ship is now),
+        // 2. a player standing on a ship is carried along (after a jump: sideways, while above the same ship),
+        // 3. a right-click on the ship's seat, an engine or the Core is sent to the server. The ship's blocks are
+        //    not real blocks, so the click is checked here, before the game handles it, against the ship's grid.
         ClientTickEvents.START_CLIENT_TICK.register(client -> {
-            if (client.player == null || client.level == null || client.player.isPassenger()
-                    || client.gui.screen() != null) {
+            if (client.player == null || client.level == null) {
+                carriedShip = -1;
+                return;
+            }
+            List<AirshipEntity> ships = client.level.getEntitiesOfClass(
+                    AirshipEntity.class, client.player.getBoundingBox().inflate(256.0));
+            for (AirshipEntity ship : ships) {
+                ship.clientAdvance();
+            }
+
+            int result = AirshipEntity.CARRY_NONE;
+            if (!client.player.isPassenger()) {
+                for (AirshipEntity ship : ships) {
+                    boolean wasOnShip = ship.getId() == carriedShip && ticksOffShip < 60;
+                    result = ship.carry(client.player, wasOnShip);
+                    if (result == AirshipEntity.CARRY_STANDING) {
+                        carriedShip = ship.getId();
+                        ticksOffShip = 0;
+                        break;
+                    }
+                    if (result == AirshipEntity.CARRY_ABOVE) {
+                        break;
+                    }
+                }
+            } else {
+                carriedShip = -1;
+            }
+            if (result != AirshipEntity.CARRY_STANDING) {
+                ticksOffShip++;
+            }
+
+            if (client.gui.screen() != null) {
                 return;
             }
             Vec3 eye = client.player.getEyePosition();
             Vec3 look = client.player.getViewVector(1.0F);
             AirshipEntity target = null;
-            double best = Double.MAX_VALUE;
-            for (AirshipEntity ship : client.level.getEntitiesOfClass(
-                    AirshipEntity.class, client.player.getBoundingBox().inflate(64.0))) {
-                double distance = ship.seatDistance(eye, look, 4.5);
-                if (distance >= 0.0 && distance < best) {
-                    best = distance;
+            AirshipEntity.ShipHit best = null;
+            for (AirshipEntity ship : ships) {
+                AirshipEntity.ShipHit hit = ship.pick(eye, look, 4.5);
+                if (hit != null && (best == null || hit.distance() < best.distance())) {
+                    best = hit;
                     target = ship;
                 }
             }
-            if (target == null) {
+            if (best == null || !AirshipEntity.isClickable(best.state())) {
                 return;
             }
+            if (client.player.isPassenger() && best.state().is(ModBlocks.AIRSHIP_SEAT)) {
+                return; // already seated
+            }
             HitResult hit = client.hitResult;
-            if (hit != null && hit.getType() != HitResult.Type.MISS && hit.getLocation().distanceTo(eye) < best) {
-                return; // a real block or entity is in front of the seat
+            if (hit != null && hit.getType() != HitResult.Type.MISS
+                    && hit.getLocation().distanceTo(eye) < best.distance()) {
+                return; // a real block or entity is in front of it
             }
             boolean clicked = false;
             while (client.options.keyUse.consumeClick()) {
                 clicked = true;
             }
             if (clicked) {
-                ClientPlayNetworking.send(new AirshipBoardPayload(target.getId()));
-            }
-        });
-
-        // A player standing on a flying ship moves along with it and can walk on it (see AirshipShipColliders).
-        // After a jump it keeps being carried sideways for a while, as long as it is above the same ship.
-        ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            if (client.player == null || client.level == null || client.player.isPassenger()) {
-                carriedShip = -1;
-                return;
-            }
-            int result = AirshipEntity.CARRY_NONE;
-            for (AirshipEntity ship : client.level.getEntitiesOfClass(
-                    AirshipEntity.class, client.player.getBoundingBox().inflate(64.0))) {
-                boolean wasOnShip = ship.getId() == carriedShip && ticksOffShip < 60;
-                result = ship.carry(client.player, wasOnShip);
-                if (result == AirshipEntity.CARRY_STANDING) {
-                    carriedShip = ship.getId();
-                    ticksOffShip = 0;
-                    break;
-                }
-                if (result == AirshipEntity.CARRY_ABOVE) {
-                    break;
-                }
-            }
-            if (result != AirshipEntity.CARRY_STANDING) {
-                ticksOffShip++;
+                ClientPlayNetworking.send(new AirshipShipClickPayload(target.getId(), best.cell()));
             }
         });
 

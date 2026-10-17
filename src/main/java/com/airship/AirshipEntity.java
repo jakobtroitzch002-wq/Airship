@@ -27,6 +27,9 @@ import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.SimpleMenuProvider;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.EmptyBlockGetter;
@@ -566,11 +569,11 @@ public class AirshipEntity extends Entity {
         }
     }
 
-    /**
-     * Client side: the Airship Seat cell the player looks at within {@code reach} blocks, or -1 if the view hits
-     * another block of the ship first (or nothing). Returns the distance to the seat.
-     */
-    public double seatDistance(Vec3 eye, Vec3 look, double reach) {
+    /** A block of the ship hit by the player's view: its cell (relative to the Core), state and distance. */
+    public record ShipHit(BlockPos cell, BlockState state, double distance) {}
+
+    /** Client side: the first block of the ship on the player's view line within {@code reach}, or null. */
+    public ShipHit pick(Vec3 eye, Vec3 look, double reach) {
         Vec3 origin = position();
         double angle = -Math.toRadians(getYRot());
         double cos = Math.cos(angle);
@@ -585,10 +588,135 @@ public class AirshipEntity extends Entity {
                     Mth.floor(dx * sin + dz * cos + 0.5));
             BlockState state = stateByPos.get(cell);
             if (state != null) {
-                return state.is(ModBlocks.AIRSHIP_SEAT) ? d : -1.0;
+                return new ShipHit(cell, state, d);
             }
         }
-        return -1.0;
+        return null;
+    }
+
+    /** True for the ship's blocks that can be right-clicked while it flies. */
+    public static boolean isClickable(BlockState state) {
+        return state.is(ModBlocks.AIRSHIP_SEAT) || ModBlocks.isEngine(state) || ModBlocks.isCore(state);
+    }
+
+    /** World position of the centre of a cell. */
+    private Vec3 cellCenter(BlockPos cell) {
+        return position().add(toWorldOffset(new Vec3(cell.getX(), cell.getY() + 0.5, cell.getZ())));
+    }
+
+    /** Server side: a player right-clicked a block of this ship. */
+    public void click(ServerPlayer player, BlockPos cell) {
+        BlockState state = stateByPos.get(cell);
+        if (state == null || isRemoved() || player.distanceToSqr(cellCenter(cell)) > 49.0) {
+            return;
+        }
+        if (state.is(ModBlocks.AIRSHIP_SEAT)) {
+            board(player);
+        } else if (ModBlocks.isEngine(state)) {
+            openEngine(player, cell, state);
+        } else if (ModBlocks.isCore(state)) {
+            ServerPlayNetworking.send(player, coreInfo());
+        }
+    }
+
+    /** The engine screen for an engine on the flying ship: its fuel lives in this entity until the ship lands. */
+    private void openEngine(ServerPlayer player, BlockPos cell, BlockState state) {
+        boolean hasTurbo = ModBlocks.engineHasTurbo(state);
+        BlockPos key = cell.immutable();
+        AirshipEngineTank tank = new AirshipEngineTank() {
+            @Override
+            public int getFuel() {
+                return engineFuel.getOrDefault(key, 0);
+            }
+
+            @Override
+            public int getTurbo() {
+                return turboFuel.getOrDefault(key, 0);
+            }
+
+            @Override
+            public int maxTurbo() {
+                return hasTurbo ? AirshipEngineBlockEntity.MAX_TURBO : 0;
+            }
+
+            @Override
+            public void addFuel(int ticks) {
+                engineFuel.put(key, Math.min(AirshipEngineBlockEntity.MAX_FUEL, getFuel() + ticks));
+            }
+
+            @Override
+            public void addTurbo(int ticks) {
+                turboFuel.put(key, Math.min(maxTurbo(), getTurbo() + ticks));
+            }
+
+            @Override
+            public boolean isUsableBy(Player user) {
+                return !isRemoved() && stateByPos.containsKey(key) && user.distanceToSqr(cellCenter(key)) <= 64.0;
+            }
+        };
+        ContainerData data = new ContainerData() {
+            @Override
+            public int get(int index) {
+                if (index == 2) {
+                    return hasTurbo ? 1 : 0;
+                }
+                return (index == 0 ? tank.getFuel() : tank.getTurbo()) / 20; // seconds, see AirshipEngineBlockEntity
+            }
+
+            @Override
+            public void set(int index, int value) {
+            }
+
+            @Override
+            public int getCount() {
+                return 3;
+            }
+        };
+        player.openMenu(new SimpleMenuProvider(
+                (containerId, inventory, user) -> new AirshipEngineMenu(containerId, inventory, tank, data),
+                Component.translatable(state.getBlock().getDescriptionId())));
+    }
+
+    /** What the Core screen shows for this flying ship. */
+    public AirshipCoreInfoPayload coreInfo() {
+        int seatBlocks = 0;
+        int fuel = 0;
+        for (BlockState state : stateByPos.values()) {
+            if (state.is(ModBlocks.AIRSHIP_SEAT)) {
+                seatBlocks++;
+            }
+        }
+        for (int value : engineFuel.values()) {
+            fuel += value;
+        }
+        int animals = 0;
+        for (Entity passenger : getPassengers()) {
+            if (!(passenger instanceof Player)) {
+                animals++;
+            }
+        }
+        BlockState core = stateByPos.get(BlockPos.ZERO);
+        int max = core != null ? ModBlocks.coreLimit(core) : stateByPos.size();
+        return new AirshipCoreInfoPayload(
+                BlockPos.containing(position()), true, "", stateByPos.size(), max, lift, requiredLift, seatBlocks,
+                cushions.size(), engineFuel.size(), fuel, engineFuel.size() * AirshipEngineBlockEntity.MAX_FUEL,
+                animals, getId());
+    }
+
+    /** A button on the Core screen of this flying ship was pressed. */
+    public void coreAction(ServerPlayer player, int action) {
+        if (isRemoved() || player.distanceToSqr(cellCenter(BlockPos.ZERO)) > 64.0) {
+            return;
+        }
+        if (action == AirshipCoreActionPayload.ALIGN && level() instanceof ServerLevel serverLevel) {
+            // Snap the ship to the block grid right where it is and turn it into blocks, so it can be rebuilt.
+            // Whoever sits on it is put down on their spot; sitting on the Airship Seat again lifts it off.
+            if (AirshipAssembler.disassemble(serverLevel, this)) {
+                return;
+            }
+            player.sendOverlayMessage(Component.translatable("message.airship.cannot_land"));
+        }
+        ServerPlayNetworking.send(player, coreInfo());
     }
 
     /**
@@ -656,7 +784,24 @@ public class AirshipEntity extends Entity {
                 setClientData(pending);
             }
         }
+        clientAdvance();
+        advanced = false;
+    }
 
+    /** Client side: already moved this tick (by {@link #clientAdvance} from the start of the client tick). */
+    private boolean advanced;
+
+    /**
+     * Client side: moves the ship one tick along the snapshots from the server. Called at the start of each
+     * client tick, before players move, so a player standing on the ship is carried first and then walks and
+     * collides with the ship where it is in this tick (otherwise a rising ship could push into the player's feet).
+     * The ship's own tick calls it again; it only moves once per tick.
+     */
+    public void clientAdvance() {
+        if (advanced) {
+            return;
+        }
+        advanced = true;
         applySnapshots();
 
         // The server sends the position 20 times per second. Remember the last two positions so the

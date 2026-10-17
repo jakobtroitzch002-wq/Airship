@@ -24,7 +24,7 @@ public class AirshipEngineMenu extends AbstractContainerMenu {
     private static final int PLAYER_SLOTS = 36;
     private static final int FUEL_SLOTS = 2;
 
-    private final AirshipEngineBlockEntity engine; // null on the client
+    private final AirshipEngineTank engine; // null on the client
     private final ContainerData data;
     private final SimpleContainer fuelContainer;
     private final SimpleContainer turboContainer;
@@ -35,7 +35,7 @@ public class AirshipEngineMenu extends AbstractContainerMenu {
     }
 
     /** Server side. */
-    public AirshipEngineMenu(int containerId, Inventory inventory, AirshipEngineBlockEntity engine, ContainerData data) {
+    public AirshipEngineMenu(int containerId, Inventory inventory, AirshipEngineTank engine, ContainerData data) {
         super(ModMenus.ENGINE, containerId);
         this.engine = engine;
         this.data = data;
@@ -170,9 +170,7 @@ public class AirshipEngineMenu extends AbstractContainerMenu {
         if (engine == null) {
             return true;
         }
-        return player.distanceToSqr(
-                engine.getBlockPos().getX() + 0.5, engine.getBlockPos().getY() + 0.5, engine.getBlockPos().getZ() + 0.5)
-                <= 64.0;
+        return engine.isUsableBy(player);
     }
 
     @Override

@@ -13,7 +13,7 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 
 /** Stores the remaining fuel (in ticks of thrust) of one engine block. */
-public class AirshipEngineBlockEntity extends BlockEntity implements MenuProvider {
+public class AirshipEngineBlockEntity extends BlockEntity implements MenuProvider, AirshipEngineTank {
     /** Normal tank size in ticks: 1 hour of thrust. */
     public static final int MAX_FUEL = AirshipConfig.get().maxFuelTicks();
     /** Turbo tank size in ticks: it burns 5x as fast, so this lasts 10 minutes of turbo. */
@@ -52,10 +52,12 @@ public class AirshipEngineBlockEntity extends BlockEntity implements MenuProvide
         return ModBlocks.engineHasTurbo(getBlockState());
     }
 
+    @Override
     public int maxTurbo() {
         return canTurbo() ? MAX_TURBO : 0;
     }
 
+    @Override
     public int getFuel() {
         return fuel;
     }
@@ -65,11 +67,13 @@ public class AirshipEngineBlockEntity extends BlockEntity implements MenuProvide
         setChanged();
     }
 
+    @Override
     public void addFuel(int ticks) {
         setFuel(fuel + ticks);
     }
 
     /** Turbo tank: burns {@link AirshipEntity#TURBO_BURN_RATE} times faster and makes the ship much faster. */
+    @Override
     public int getTurbo() {
         return turbo;
     }
@@ -79,8 +83,15 @@ public class AirshipEngineBlockEntity extends BlockEntity implements MenuProvide
         setChanged();
     }
 
+    @Override
     public void addTurbo(int ticks) {
         setTurbo(turbo + ticks);
+    }
+
+    @Override
+    public boolean isUsableBy(Player player) {
+        return !isRemoved() && player.distanceToSqr(
+                getBlockPos().getX() + 0.5, getBlockPos().getY() + 0.5, getBlockPos().getZ() + 0.5) <= 64.0;
     }
 
     @Override
