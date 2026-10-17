@@ -117,8 +117,8 @@ Cushions (new in 26.3) are entities that players can sit on. On a ship they are 
 | Simple Airship Balloon | carries only **3 ship blocks** (a Balloon carries 5), pops from **any** projectile | wool over a stick |
 | Reinforced Airship Balloon (makes 4) | like a Balloon, but only pops from **tridents** and **crossbow arrows with Piercing III** | 4 Balloons (corners) + 4 leather + 1 iron ingot (middle) |
 | Simple Airship Engine | gives **60 %** of the fuel speed boost, has **no turbo** and burns **twice the fuel** | iron ingot, cobblestone, furnace, 3 planks |
-| Large Airship Balloon | carries **8 ship blocks**, pops like a Balloon | 4 phantom membranes (corners) + 4 wool + 1 Balloon (middle) |
-| Sky Balloon | carries **12 ship blocks**, only pops from tridents and crossbow arrows with Piercing III | 4 diamonds (corners) + 4 leather + 1 Large Balloon (middle) |
+| Large Airship Balloon | carries **8 ship blocks**, pops like a Balloon | 2 phantom membranes (top, bottom) + 2 wool (sides) + 1 Balloon (middle) |
+| Sky Balloon | carries **12 ship blocks**, only pops from tridents and crossbow arrows with Piercing III | 2 leather (top, bottom) + 2 iron ingots (sides) + 1 Large Balloon (middle) |
 | Advanced Airship Engine | gives **160 %** of the fuel speed boost, has turbo | 4 diamonds (corners), redstone block (top), 2 blaze rods (sides), Airship Engine (middle), blast furnace (bottom) |
 
 All core limits are capped by `maxBlocks` from the config. The Core screen shows how many ship blocks the balloons

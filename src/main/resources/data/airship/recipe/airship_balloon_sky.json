@@ -2,14 +2,14 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "D": "minecraft:diamond",
+    "I": "minecraft:iron_ingot",
     "L": "minecraft:leather",
     "B": "airship:airship_balloon_large"
   },
   "pattern": [
-    "DLD",
-    "LBL",
-    "DLD"
+    " L ",
+    "IBI",
+    " L "
   ],
   "result": {
     "id": "airship:airship_balloon_sky",

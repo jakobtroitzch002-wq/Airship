@@ -7,9 +7,9 @@
     "B": "airship:airship_balloon"
   },
   "pattern": [
-    "MWM",
+    " M ",
     "WBW",
-    "MWM"
+    " M "
   ],
   "result": {
     "id": "airship:airship_balloon_large",
