@@ -2,14 +2,14 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "M": "minecraft:phantom_membrane",
-    "W": "#minecraft:wool",
+    "I": "minecraft:iron_ingot",
+    "L": "minecraft:leather",
     "B": "airship:airship_balloon"
   },
   "pattern": [
-    " M ",
-    "WBW",
-    " M "
+    " L ",
+    "IBI",
+    " L "
   ],
   "result": {
     "id": "airship:airship_balloon_large",
