@@ -122,7 +122,9 @@ screen only has the fuel slot. Mixed ships work: speed is blended by how much of
 ## Walking on a flying ship
 
 Players who are not seated can stand and walk on a flying ship: it moves and turns them along while they stand
-on it. A player who jumps off or falls off is left behind. When the ship is turned, its blocks are a little wider
+on it, and they can still walk around and jump. A player who gets off a seat while the ship flies is put on top of
+the seat and carried along too. After a jump players keep moving along with the ship as long as they are above it;
+only who jumps or falls off the side is left behind. When the ship is turned, its blocks are a little wider
 for walking (slight bumps at the edges).
 
 ## Shooting down balloons

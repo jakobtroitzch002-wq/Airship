@@ -23,6 +23,10 @@ import net.minecraft.world.phys.Vec3;
 
 public final class AirshipClient implements ClientModInitializer {
     /** How many tooltip lines each item has (the texts are in the language files). */
+    /** The ship the player last stood on, and how many ticks ago (see the carry tick below). */
+    private static int carriedShip = -1;
+    private static int ticksOffShip = 1000;
+
     private static final java.util.Map<String, Integer> TOOLTIP_LINES = java.util.Map.of(
             "airship_core", 2,
             "airship_core_wood", 2,
@@ -188,16 +192,29 @@ public final class AirshipClient implements ClientModInitializer {
             }
         });
 
-        // A player standing on a flying ship moves along with it (see AirshipShipColliders).
+        // A player standing on a flying ship moves along with it and can walk on it (see AirshipShipColliders).
+        // After a jump it keeps being carried sideways for a while, as long as it is above the same ship.
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (client.player == null || client.level == null || client.player.isPassenger()) {
+                carriedShip = -1;
                 return;
             }
+            int result = AirshipEntity.CARRY_NONE;
             for (AirshipEntity ship : client.level.getEntitiesOfClass(
                     AirshipEntity.class, client.player.getBoundingBox().inflate(64.0))) {
-                if (ship.carry(client.player)) {
+                boolean wasOnShip = ship.getId() == carriedShip && ticksOffShip < 60;
+                result = ship.carry(client.player, wasOnShip);
+                if (result == AirshipEntity.CARRY_STANDING) {
+                    carriedShip = ship.getId();
+                    ticksOffShip = 0;
                     break;
                 }
+                if (result == AirshipEntity.CARRY_ABOVE) {
+                    break;
+                }
+            }
+            if (result != AirshipEntity.CARRY_STANDING) {
+                ticksOffShip++;
             }
         });
 

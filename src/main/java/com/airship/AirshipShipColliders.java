@@ -45,6 +45,15 @@ public final class AirshipShipColliders {
         return out;
     }
 
+    /** True if one of the ship's blocks is below the entity, at most {@code depth} blocks down. */
+    public static boolean isAbove(AirshipEntity ship, Entity entity, double depth) {
+        AABB box = entity.getBoundingBox();
+        AABB column = new AABB(box.minX, box.minY - depth, box.minZ, box.maxX, box.minY, box.maxZ);
+        List<VoxelShape> out = new ArrayList<>();
+        ship.collisionShapes(column, out);
+        return !out.isEmpty();
+    }
+
     /** True if an entity's feet rest on (or are just inside) one of the ship's blocks. */
     public static boolean standsOn(AirshipEntity ship, Entity entity) {
         AABB box = entity.getBoundingBox();

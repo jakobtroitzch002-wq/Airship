@@ -399,26 +399,35 @@ public class AirshipEntity extends Entity {
         }
     }
 
+    public static final int CARRY_NONE = 0;
+    public static final int CARRY_ABOVE = 1;
+    public static final int CARRY_STANDING = 2;
+
     /**
-     * Client side, after the ship moved this tick: an entity standing on the ship moves and turns with it.
-     * Returns true if it was carried.
+     * Client side, after the ship moved this tick: an entity standing on the ship moves and turns with it, and
+     * can still walk around on it. An entity that just jumped ({@code wasOnShip}) keeps moving along sideways as
+     * long as it is above the ship, so it lands on the ship again instead of being left behind.
+     *
+     * @return {@link #CARRY_STANDING}, {@link #CARRY_ABOVE} or {@link #CARRY_NONE}
      */
-    public boolean carry(Entity entity) {
-        if (!smoothReady || entity.isPassenger() || entity.getDeltaMovement().y > 0.2) {
-            return false;
+    public int carry(Entity entity, boolean wasOnShip) {
+        if (!smoothReady || entity.isPassenger()) {
+            return CARRY_NONE;
+        }
+        boolean standing = entity.getDeltaMovement().y <= 0.2 && AirshipShipColliders.standsOn(this, entity);
+        if (!standing && !(wasOnShip && AirshipShipColliders.isAbove(this, entity, 4.0))) {
+            return CARRY_NONE;
         }
         float turn = Mth.wrapDegrees(curYaw - prevYaw);
-        if (curPos.equals(prevPos) && turn == 0.0F) {
-            return false;
+        if (!curPos.equals(prevPos) || turn != 0.0F) {
+            Vec3 offset = entity.position().subtract(prevPos).yRot((float) -Math.toRadians(turn));
+            Vec3 target = curPos.add(offset);
+            // In the air only the sideways movement is taken over: jumping and falling stay the player's own.
+            double y = standing ? target.y : entity.getY();
+            entity.setPos(target.x, y, target.z);
+            entity.setYRot(entity.getYRot() + turn);
         }
-        if (!AirshipShipColliders.standsOn(this, entity)) {
-            return false;
-        }
-        Vec3 offset = entity.position().subtract(prevPos).yRot((float) -Math.toRadians(turn));
-        Vec3 target = curPos.add(offset);
-        entity.setPos(target.x, target.y, target.z);
-        entity.setYRot(entity.getYRot() + turn);
-        return true;
+        return standing ? CARRY_STANDING : CARRY_ABOVE;
     }
 
     public int getFuel(BlockPos relativePos) {
@@ -515,7 +524,16 @@ public class AirshipEntity extends Entity {
         if (resting && (pilot == null || pilot == passenger)) {
             return landingSpot(passenger);
         }
-        return position().add(toWorldOffset(seatOf(passenger)));
+        // Stand on top of the seat block (or on the cushion). The players see the ship a few ticks behind the
+        // server, so while it moves, the spot is moved back by that much; otherwise they would land beside it.
+        Vec3 seat = seatOf(passenger);
+        BlockPos cell = new BlockPos(Mth.floor(seat.x + 0.5), Mth.floor(seat.y), Mth.floor(seat.z + 0.5));
+        BlockState below = stateByPos.get(cell);
+        Vec3 spot = below != null && below.is(ModBlocks.AIRSHIP_SEAT)
+                ? new Vec3(seat.x, cell.getY() + 1.0, seat.z)
+                : new Vec3(seat.x, seat.y + 0.1, seat.z);
+        Vec3 lag = velocity.scale(-(INTERPOLATION_DELAY_TICKS + 1.0));
+        return position().add(lag).add(toWorldOffset(spot));
     }
 
     private Vec3 seatOf(Entity passenger) {
