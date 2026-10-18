@@ -1,13 +1,17 @@
 package com.airship;
 
+import java.util.function.BiConsumer;
 import org.jetbrains.annotations.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -136,6 +140,58 @@ public abstract class AirshipBigCoreBlock extends Block implements EntityBlock {
             }
         }
         return super.playerWillDestroy(level, pos, state, player);
+    }
+
+    /** Removes every block of this cube that is still there, without drops. */
+    private void removeCube(Level level, BlockPos pos, BlockState state) {
+        Direction facing = state.getValue(FACING);
+        BlockPos master = masterPos(pos, state);
+        int parts = size() * size() * size();
+        for (int part = 0; part < parts; part++) {
+            BlockPos target = master.offset(offset(part, facing));
+            BlockState other = level.getBlockState(target);
+            if (other.is(this) && part(other) == part && other.getValue(FACING) == facing) {
+                level.setBlock(target, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL | Block.UPDATE_SUPPRESS_DROPS);
+            }
+        }
+    }
+
+    /** True if every block of this cube is in place. */
+    private boolean isComplete(Level level, BlockPos pos, BlockState state) {
+        Direction facing = state.getValue(FACING);
+        BlockPos master = masterPos(pos, state);
+        int parts = size() * size() * size();
+        for (int part = 0; part < parts; part++) {
+            BlockState other = level.getBlockState(master.offset(offset(part, facing)));
+            if (!other.is(this) || part(other) != part || other.getValue(FACING) != facing) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * An explosion that hits any block of the cube destroys the whole cube; the item drops once. (Without this,
+     * TNT would leave the other blocks behind as broken pieces.)
+     */
+    @Override
+    protected void onExplosionHit(BlockState state, ServerLevel level, BlockPos pos, Explosion explosion,
+            BiConsumer<ItemStack, BlockPos> dropConsumer) {
+        removeCube(level, pos, state);
+        dropConsumer.accept(new ItemStack(this), pos);
+    }
+
+    /** Cleans up pieces of a cube that lost blocks in some other way (they look broken and do nothing). */
+    @Override
+    protected boolean isRandomlyTicking(BlockState state) {
+        return true;
+    }
+
+    @Override
+    protected void randomTick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
+        if (!isComplete(level, pos, state)) {
+            removeCube(level, pos, state);
+        }
     }
 
     @Override
